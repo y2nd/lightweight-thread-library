@@ -2,6 +2,11 @@
 
 struct node sentinel = {NULL, NULL};
 
+void queue__init(struct queue* queue){
+	queue->top=&sentinel;
+	queue->end=&sentinel;
+}
+
 int queue__add(struct queue* queue, void* x)
 {
 	struct node* new_node = malloc(sizeof(struct node));
@@ -16,7 +21,11 @@ int queue__add(struct queue* queue, void* x)
 	return 0;
 }
 
-void* queue__pop(struct queue* queue)
+void* queue__top(struct queue* queue)
 {
-	void* return_value;
+	return queue->top->value;
+}
+
+int queue__is_empty(struct queue* queue){
+	return queue->top == queue->end;
 }
