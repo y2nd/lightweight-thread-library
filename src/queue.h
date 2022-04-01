@@ -3,13 +3,10 @@
 
 #include <stddef.h>
 
-struct node {
-	void* value;
-	struct node* next;
-};
-
 struct queue {
-	struct node *top, end;
+	void** memory;
+	size_t size;
+	size_t beg, end;
 };
 
 /* Fails if return value is -1 */
