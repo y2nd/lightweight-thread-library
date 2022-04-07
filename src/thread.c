@@ -81,6 +81,10 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 	}
 	thread->uc.uc_stack.ss_size = 64 * 1024;
 	thread->uc.uc_stack.ss_sp = malloc(thread->uc.uc_stack.ss_size);
+	if (!thread->uc.uc_stack.ss_sp) {
+		error("thread_create malloc is null");
+		return -1;
+	}
 	thread->uc.uc_link = NULL; // WARN : (sizeof(ucontext_t));
 	thread->valgrind_stackid = VALGRIND_STACK_REGISTER(thread->uc.uc_stack.ss_sp, thread->uc.uc_stack.ss_sp + thread->uc.uc_stack.ss_size);
 	thread->finished = 0;
@@ -117,6 +121,7 @@ int thread_join(thread_t thread, void** retval)
 		thread_yield();
 
 	*retval = _thread->return_value;
+	free(_thread->uc.uc_stack.ss_sp);
 	free(_thread);
 	return 0;
 }
@@ -129,7 +134,6 @@ void thread_exit(void* retval)
 		exit((int)((intptr_t)retval));
 	}
 
-	free(thread->uc.uc_stack.ss_sp);
 	if (queue__pop(&queue) != thread) {
 		error("thread_exit queue__pop");
 		exit(-1);
