@@ -32,6 +32,8 @@ struct thread main_thread;
 int init_main_thread_if_needed()
 {
 	if (!is_initialized) {
+		queue__init(&queue);
+
 		is_initialized = 1;
 
 		if (getcontext(&main_thread.uc) != 0) {
@@ -96,10 +98,12 @@ int thread_yield(void)
 	if (init_main_thread_if_needed() != 0)
 		return -1;
 
+	struct thread* thread_before = (struct thread*)queue__top(&queue);
+
 	queue_roll(&queue);
 
-	if (setcontext(&((struct thread*)queue__top(&queue))->uc) != 0) {
-		error("thread_yield set_context");
+	if (swapcontext(&(thread_before->uc), &((struct thread*)queue__top(&queue))->uc) != 0) {
+		error("thread_yield swapcontext");
 		return -1;
 	}
 
@@ -109,7 +113,7 @@ int thread_yield(void)
 int thread_join(thread_t thread, void** retval)
 {
 	struct thread* _thread = (struct thread*)thread;
-	if (_thread->finished != 1)
+	while (_thread->finished != 1)
 		thread_yield();
 
 	*retval = _thread->return_value;
