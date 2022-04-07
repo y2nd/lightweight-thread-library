@@ -29,4 +29,9 @@ void* queue__top(struct queue* queue);
 // Check if empty
 int queue__is_empty(struct queue* queue);
 
+// Add and pop
+int queue_roll(struct queue* queue);
+
+// TODO : Queue release
+
 #endif // __QUEUE_H__

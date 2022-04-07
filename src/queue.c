@@ -2,6 +2,8 @@
 
 #include <stdlib.h>
 
+// WARN : Éviter la file vide et initialiser avec une valeur (toujours au moins le main)
+
 struct node sentinel = {NULL, NULL};
 
 void queue__init(struct queue* queue)
@@ -52,4 +54,19 @@ void* queue__pop(struct queue* queue)
 		queue->end = &sentinel;
 
 	return return_value;
+}
+
+int queue_roll(struct queue* queue)
+{
+	if (queue->top == &sentinel)
+		return 0;
+
+	queue->end->next = queue->top;
+
+	queue->top = queue->top->next;
+
+	queue->end = queue->end->next;
+	queue->end->next = &sentinel;
+
+	return 0;
 }

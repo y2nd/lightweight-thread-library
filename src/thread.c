@@ -1,11 +1,13 @@
 #include "thread.h"
 
+#include "queue.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ucontext.h>
 #include <ucontext.h> /* ne compile pas avec -std=c89 ou -std=c99 */
 #include <valgrind/valgrind.h>
 #include <errno.h>
+#include <stdint.h>
 
 void error(const char* prefix)
 {
@@ -22,35 +24,56 @@ struct thread {
 	int finished;
 };
 
-struct queue* queue;
-int isinit = 0;
+struct queue queue;
+int is_initialized = 0;
 
-thread_t thread_self(void) 
+struct thread main_thread;
+
+int init_main_thread_if_needed()
 {
-  if (!isinit) {
-    queue__init(queue);
-    isinit = 1;
-  }
-  return queue__top(queue);
+	if (!is_initialized) {
+		is_initialized = 1;
+
+		if (getcontext(&main_thread.uc) != 0) {
+			error("init_main_thread_if_needed getcontext");
+			return -1;
+		}
+		main_thread.valgrind_stackid = -1;
+		main_thread.finished = 0;
+
+		if (queue__add(&queue, &main_thread) != 0) {
+			error("init_main_thread_if_needed queue_add error");
+			return -1;
+		}
+
+		return 0;
+	}
+	return 0;
 }
 
-void launch(struct thread* thread, void* (*func)(void*), void* arg)
+thread_t thread_self(void)
 {
-  void* return_value = func(arg);
-  error("error creating thread");
-  exit(1);
-  thread->return_value = return_value;
+	init_main_thread_if_needed();
+	return queue__top(&queue);
+}
+
+void launch(void* (*func)(void*), void* arg)
+{
+	thread_exit(func(arg));
 }
 
 int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 {
-    if (!isinit) {
-    queue__init(queue);
-    queue__add(queue, NULL); //!!!!
-    isinit = 1;
-  }
+	if (init_main_thread_if_needed() != 0)
+		return -1;
+
 	struct thread* thread = malloc(sizeof(struct thread));
-	if (getcontext(&thread->uc) == -1) {
+	if (!thread) {
+		error("thread_create malloc is null");
+		return -1;
+	}
+
+	if (getcontext(&thread->uc) != 0) {
 		error("thread_create getcontext");
 		return -1;
 	}
@@ -60,87 +83,61 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 	thread->valgrind_stackid = VALGRIND_STACK_REGISTER(thread->uc.uc_stack.ss_sp, thread->uc.uc_stack.ss_sp + thread->uc.uc_stack.ss_size);
 	thread->finished = 0;
 
-	makecontext(&thread->uc, (void (*)(void))#include "thread.h"
+	makecontext(&thread->uc, (void (*)(void))launch, 2, func, funcarg);
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/ucontext.h>
-#include <ucontext.h> /* ne compile pas avec -std=c89 ou -std=c99 */
-#include <valgrind/valgrind.h>
-#include <errno.h>
+	queue__add(&queue, thread);
 
-void error(const char* prefix)
-{
-	if (errno != 0)
-		perror(prefix);
-	else
-		fprintf(stderr, "%s\n", prefix);
+	*newthread = thread;
+	return 0;
 }
 
-struct thread {
-	ucontext_t uc;
-	int valgrind_stackid;
-	void* return_value;
-	int finished;
-};
-
-struct queue* queue;
-int isinit = 0;
-
-thread_t thread_self(void) 
+int thread_yield(void)
 {
-  if (!isinit) {
-    queue__init(queue);
-    isinit = 1;
-  }
-  return queue__top(queue);
-}
+	if (init_main_thread_if_needed() != 0)
+		return -1;
 
-void init_main_thread(thread_t* thread) 
-{
-  getcontext(&thread->uc);
-  thread->uc.uc_stack.ss_size = 64 * 1024;
-	thread->uc.uc_stack.ss_sp = malloc(thread->uc.uc_stack.ss_size);
-	thread->uc.uc_link = NULL; // WARN : (sizeof(ucontext_t));
-	thread->valgrind_stackid = VALGRIND_STACK_REGISTER(thread->uc.uc_stack.ss_sp, thread->uc.uc_stack.ss_sp + thread->uc.uc_stack.ss_size);
-	thread->finished = 0;
-  //contexte existe dèja !!
-}
+	queue_roll(&queue);
 
-void launch(struct thread* thread, void* (*func)(void*), void* arg)
-{
-  void* return_value = func(arg);
-  error("error creating thread");
-  exit(1);
-  thread->return_value = return_value;
-}
-
-int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
-{
-    if (!isinit) {
-    queue__init(queue);
-
-    init_main_thread()
-    queue__add(queue, NULL); //!!!!
-    isinit = 1;
-  }
-	struct thread* thread = malloc(sizeof(struct thread));
-	if (getcontext(&thread->uc) == -1) {
-		error("thread_create getcontext");
+	if (setcontext(&((struct thread*)queue__top(&queue))->uc) != 0) {
+		error("thread_yield set_context");
 		return -1;
 	}
-	thread->uc.uc_stack.ss_size = 64 * 1024;
-	thread->uc.uc_stack.ss_sp = malloc(thread->uc.uc_stack.ss_size);
-	thread->uc.uc_link = NULL; // WARN : (sizeof(ucontext_t));
-	thread->valgrind_stackid = VALGRIND_STACK_REGISTER(thread->uc.uc_stack.ss_sp, thread->uc.uc_stack.ss_sp + thread->uc.uc_stack.ss_size);
-	thread->finished = 0;
 
-	makecontext(&thread->uc, (void (*)(void))launch, 3, thread, func, funcarg);
-
-	*newthread = thread;
 	return 0;
-}launch, 3, thread, func, funcarg);
+}
 
-	*newthread = thread;
+int thread_join(thread_t thread, void** retval)
+{
+	struct thread* _thread = (struct thread*)thread;
+	if (_thread->finished != 1)
+		thread_yield();
+
+	*retval = _thread->return_value;
+	free(_thread);
 	return 0;
+}
+
+void thread_exit(void* retval)
+{
+	struct thread* thread = (struct thread*)thread_self();
+
+	if (thread == &main_thread) {
+		exit((int)((intptr_t)retval));
+	}
+
+	free(thread->uc.uc_stack.ss_sp);
+	if (queue__pop(&queue) != thread) {
+		error("thread_exit queue__pop");
+		exit(-1);
+	}
+
+	VALGRIND_STACK_DEREGISTER(thread->valgrind_stackid);
+
+	thread->return_value = retval;
+	thread->finished = 1;
+
+	if (setcontext(&((struct thread*)queue__top(&queue))->uc) != 0) {
+		error("thread_exit set_context");
+	}
+	exit(-1);
 }
