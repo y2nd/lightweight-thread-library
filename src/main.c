@@ -9,7 +9,7 @@ void* function1(void* arg)
 {
 	printf("Function %" PRIuPTR "\n", (intptr_t)arg);
 	thread_yield();
-	return NULL;
+	return (void*)(10 * (intptr_t)arg);
 }
 
 int main()
@@ -27,10 +27,10 @@ int main()
 
 	void* retval;
 	thread_join(thread2, &retval);
-	printf("Function %" PRIuPTR "\n", (intptr_t)retval);
+	printf("Function2 %" PRIuPTR "\n", (intptr_t)retval);
 
 	thread_join(thread, &retval);
-	printf("Function %" PRIuPTR "\n", (intptr_t)retval);
+	printf("Function1 %" PRIuPTR "\n", (intptr_t)retval);
 
 	return EXIT_SUCCESS;
 }
