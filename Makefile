@@ -1,4 +1,4 @@
-CC = LD_LIBRARY_PATH=./install/lib/ gcc
+CC = gcc
 CFLAGS = -Wall -O3 -Wextra -Wpedantic
 VALGRIND_OPTIONS = --leak-check=full --show-reachable=yes --track-origins=yes
 
@@ -12,16 +12,21 @@ BINS_PTHREAD:=$(BINS_PTHREAD:tst/%.c=$(BIN_PATH)/%-pthread)
 
 all: install test
 
+$(LIB_PATH)/libthread.a: 
+	$(CC) -c src/thread.c -o thread.o -Isrc
+	$(CC) -c src/queue.c  -o queue.o -Isrc
+	ar rcs $@ thread.o queue.o
+
 $(LIB_PATH)/libthread.so: 
 	$(CC) -c -fPIC src/thread.c -o thread.o -Isrc
 	$(CC) -c -fPIC src/queue.c  -o queue.o -Isrc
 	$(CC) thread.o queue.o -shared -o $(LIB_PATH)/libthread.so
 
-install: $(LIB_PATH)/libthread.so
+install: $(LIB_PATH)/libthread.a
 
-install/bin/%: tst/%.c $(LIB_PATH)/libthread.so
-	$(CC) -Isrc $(CFLAGS) -o $@ -L$(LIB_PATH) $< -lthread  
-
+install/bin/%: tst/%.c $(LIB_PATH)/libthread.a
+	@#$(CC) -Isrc $(CFLAGS) -o $@ -L$(LIB_PATH) $< -lthread  
+	$(CC) -Isrc $(CFLAGS) -o $@ $^
 install/bin/%-pthread: tst/%.c
 	$(CC) -Isrc $(CFLAGS) -DUSE_PTHREAD $< -o $@ 
 
