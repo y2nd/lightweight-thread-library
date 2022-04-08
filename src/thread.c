@@ -120,7 +120,8 @@ int thread_join(thread_t thread, void** retval)
 	while (_thread->finished != 1)
 		thread_yield();
 
-	*retval = _thread->return_value;
+	if (retval)
+		*retval = _thread->return_value;
 	free(_thread->uc.uc_stack.ss_sp);
 	free(_thread);
 	return 0;
