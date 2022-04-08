@@ -1,9 +1,9 @@
 CC = gcc
 CFLAGS = -Wall -O3 -Wextra -Wpedantic
 VALGRIND_OPTIONS = --leak-check=full --show-reachable=yes --track-origins=yes
-INCLUDE=src
-LIB_PATH=install/lib/
-BIN_PATH=install/bin/
+
+LIB_PATH=install/lib
+BIN_PATH=install/bin
 
 BINS:= $(wildcard tst/*.c)
 BINS_PTHREAD:= $(BINS)
@@ -13,8 +13,8 @@ BINS_PTHREAD:=$(BINS_PTHREAD:tst/%.c=$(BIN_PATH)/%-pthread)
 all: install test
 
 $(LIB_PATH)/libthread.so: 
-	$(CC) -c -fPIC src/thread.c -o thread.o -IINCLUDE
-	$(CC) -c -fPIC src/queue.c  -o queue.o  -IINCLUDE
+	$(CC) -c -fPIC src/thread.c -o thread.o -Isrc
+	$(CC) -c -fPIC src/queue.c  -o queue.o -Isrc
 	$(CC) thread.o queue.o -shared -o $(LIB_PATH)/libthread.so
 
 install: $(LIB_PATH)/libthread.so
