@@ -10,12 +10,14 @@ BINS_PTHREAD:= $(BINS)
 BINS:=$(BINS:tst/%.c=$(BIN_PATH)/%)
 BINS_PTHREAD:=$(BINS_PTHREAD:tst/%.c=$(BIN_PATH)/%-pthread)
 
+$(shell  mkdir -p $(LIB_PATH) $(BIN_PATH))
+
 all: install test
 
 $(LIB_PATH)/libthread.a: 
 	$(CC) -c src/thread.c -o thread.o -Isrc
 	$(CC) -c src/queue.c  -o queue.o -Isrc
-	ar rcs $@ thread.o queue.o
+	ar rc $@ thread.o queue.o
 
 $(LIB_PATH)/libthread.so: 
 	$(CC) -c -fPIC src/thread.c -o thread.o -Isrc
@@ -46,4 +48,4 @@ graphs:
 .PHONY: all test clean install
 
 clean:
-	rm -rf *.o *.so install/bin/* install/lib/* 
+	rm -rf *.o *.so install/bin/ install/lib/
