@@ -1,4 +1,4 @@
-CC = gcc
+CC = LD_LIBRARY_PATH=./install/lib/ gcc
 CFLAGS = -Wall -O3 -Wextra -Wpedantic
 VALGRIND_OPTIONS = --leak-check=full --show-reachable=yes --track-origins=yes
 
