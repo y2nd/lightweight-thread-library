@@ -9,6 +9,16 @@
 #include <errno.h>
 #include <stdint.h>
 
+#ifdef __GNUC__
+	#define INIT_QUEUE_IF_NEEDED 0
+	#define CONSTRUCTOR			 __attribute__((constructor))
+	#define DESTRUCTOR			 __attribute__((destructor))
+#else
+	#define INIT_QUEUE_IF_NEEDED init_main_thread_if_needed()
+	#define CONSTRUCTOR
+	#define DESTRUCTOR
+#endif
+
 void error(const char* prefix)
 {
 	if (errno != 0)
@@ -29,13 +39,14 @@ int is_initialized = 0;
 
 struct thread main_thread;
 
-int init_main_thread_if_needed()
+static void DESTRUCTOR release_main_thread()
+{
+	queue__release(&queue);
+}
+
+static int CONSTRUCTOR init_main_thread_if_needed()
 {
 	if (!is_initialized) {
-		queue__init(&queue);
-
-		is_initialized = 1;
-
 		if (getcontext(&main_thread.uc) != 0) {
 			error("init_main_thread_if_needed getcontext");
 			return -1;
@@ -43,19 +54,20 @@ int init_main_thread_if_needed()
 		main_thread.valgrind_stackid = -1;
 		main_thread.finished = 0;
 
-		if (queue__add(&queue, &main_thread) != 0) {
-			error("init_main_thread_if_needed queue_add error");
-			return -1;
-		}
+		queue__init(&queue, &main_thread);
 
-		return 0;
+		is_initialized = 1;
+
+#ifndef __GNUC__
+		atexit(release_main_thread);
+#endif
 	}
 	return 0;
 }
 
 thread_t thread_self(void)
 {
-	init_main_thread_if_needed();
+	INIT_QUEUE_IF_NEEDED;
 	return queue__top(&queue);
 }
 
@@ -66,7 +78,7 @@ void launch(void* (*func)(void*), void* arg)
 
 int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 {
-	if (init_main_thread_if_needed() != 0)
+	if (INIT_QUEUE_IF_NEEDED != 0)
 		return -1;
 
 	struct thread* thread = malloc(sizeof(struct thread));
@@ -99,12 +111,12 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 
 int thread_yield(void)
 {
-	if (init_main_thread_if_needed() != 0)
+	if (INIT_QUEUE_IF_NEEDED != 0)
 		return -1;
 
 	struct thread* thread_before = (struct thread*)queue__top(&queue);
 
-	queue_roll(&queue);
+	queue__roll(&queue);
 
 	if (swapcontext(&(thread_before->uc), &((struct thread*)queue__top(&queue))->uc) != 0) {
 		error("thread_yield swapcontext");
