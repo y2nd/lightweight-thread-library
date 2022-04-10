@@ -60,4 +60,5 @@ for file in files:
 
     plt.boxplot([REAL_implementation, REAL_pthread, USER_implementation,
                 USER_pthread, SYSTEM_implementation, SYSTEM_pthread], labels=["Temps réel", "Temps réel Pthread", "Temps CPU", "Temp CPU Pthread", "Temps système", "Temps système Pthread"])
+    plt.title(file)
     plt.show()
