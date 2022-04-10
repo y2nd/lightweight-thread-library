@@ -10,11 +10,15 @@
 #include <stdint.h>
 
 #ifdef __GNUC__
-	#define INIT_QUEUE_IF_NEEDED 0
-	#define CONSTRUCTOR			 __attribute__((constructor))
-	#define DESTRUCTOR			 __attribute__((destructor))
+	#define INIT_QUEUE_IF_NEEDED
+	#define INIT_QUEUE_IF_NEEDED_RETURN
+	#define CONSTRUCTOR __attribute__((constructor))
+	#define DESTRUCTOR	__attribute__((destructor))
 #else
 	#define INIT_QUEUE_IF_NEEDED init_main_thread_if_needed()
+	#define INIT_QUEUE_IF_NEEDED_RETURN        \
+		if (init_main_thread_if_needed() != 0) \
+			return -1;
 	#define CONSTRUCTOR
 	#define DESTRUCTOR
 #endif
@@ -78,8 +82,7 @@ void launch(void* (*func)(void*), void* arg)
 
 int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 {
-	if (INIT_QUEUE_IF_NEEDED != 0)
-		return -1;
+	INIT_QUEUE_IF_NEEDED_RETURN;
 
 	struct thread* thread = malloc(sizeof(struct thread));
 	if (!thread) {
@@ -111,8 +114,7 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 
 int thread_yield(void)
 {
-	if (INIT_QUEUE_IF_NEEDED != 0)
-		return -1;
+	INIT_QUEUE_IF_NEEDED_RETURN;
 
 	struct thread* thread_before = (struct thread*)queue__top(&queue);
 
