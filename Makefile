@@ -26,10 +26,10 @@ $(LIB_PATH)/libthread.so:
 
 install: $(LIB_PATH)/libthread.a
 
-install/bin/%: tst/%.c $(LIB_PATH)/libthread.a
+$(BIN_PATH)/%: tst/%.c $(LIB_PATH)/libthread.a
 	@#$(CC) -Isrc $(CFLAGS) -o $@ -L$(LIB_PATH) $< -lthread  
 	$(CC) -Isrc $(CFLAGS) -o $@ $^
-install/bin/%-pthread: tst/%.c
+$(BIN_PATH)/%-pthread: tst/%.c
 	$(CC) -Isrc $(CFLAGS) -DUSE_PTHREAD $< -o $@ 
 
 test: $(BINS)
@@ -43,9 +43,10 @@ valgrind: test
 pthreads: $(BINS_PTHREAD)
 	for x in ./install/bin/*-pthread; do echo $$x; $$x; done
 
-graphs: 
+graphs: $(BINS) $(BINS_PTHREAD)
+	python graphs/plot.py
 
-.PHONY: all test clean install
+.PHONY: all test clean install graphs
 
 clean:
 	rm -rf *.o *.so install/bin/ install/lib/
