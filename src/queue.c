@@ -3,6 +3,10 @@
 
 #include <stdlib.h>
 
+// TODO : Queue avec iterateur ?
+// TODO : Ajouter en 2e position ?
+// TODO : Pool d'objets de même taille
+
 #ifndef BETTER_QUEUE
 struct node sentinel = {NULL, NULL};
 
@@ -40,7 +44,8 @@ void* queue__pop(struct queue* queue)
 
 	void* return_value = top_node->value;
 
-	free(top_node);
+	if (top_node != &queue->base)
+		free(top_node);
 
 	// assert(queue->top != &sentinel);
 
@@ -64,6 +69,11 @@ int queue__roll(struct queue* queue)
 void queue__release(struct queue* queue)
 {
 	(void)queue;
+}
+
+int queue__has_one_element(struct queue* queue)
+{
+	return (queue->top == queue->end);
 }
 
 #else
@@ -153,6 +163,11 @@ int queue__roll(struct queue* queue)
 void queue__release(struct queue* queue)
 {
 	free(queue->pool);
+}
+
+int queue__has_one_element(struct queue* queue)
+{
+	return (queue->top == queue->end);
 }
 
 #endif

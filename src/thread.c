@@ -84,7 +84,9 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 {
 	INIT_QUEUE_IF_NEEDED_RETURN;
 
-	struct thread* thread = malloc(sizeof(struct thread));
+	// TODO : Ajouter le thread en 2 position, il va très rapidement servir
+
+	struct thread* thread = malloc(sizeof(struct thread) + 64 * 1024);
 	if (!thread) {
 		error("thread_create malloc is null");
 		return -1;
@@ -95,7 +97,7 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 		return -1;
 	}
 	thread->uc.uc_stack.ss_size = 64 * 1024;
-	thread->uc.uc_stack.ss_sp = malloc(thread->uc.uc_stack.ss_size);
+	thread->uc.uc_stack.ss_sp = thread + 1;
 	if (!thread->uc.uc_stack.ss_sp) {
 		error("thread_create malloc is null");
 		return -1;
@@ -120,6 +122,8 @@ int thread_yield(void)
 
 	queue__roll(&queue);
 
+	// TODO : Possibilité de s'économiser le swapcontext (si le thread attend sur un qui a pas fini, on swap pas)
+
 	if (swapcontext(&(thread_before->uc), &((struct thread*)queue__top(&queue))->uc) != 0) {
 		error("thread_yield swapcontext");
 		return -1;
@@ -136,8 +140,10 @@ int thread_join(thread_t thread, void** retval)
 
 	if (retval)
 		*retval = _thread->return_value;
-	free(_thread->uc.uc_stack.ss_sp);
-	free(_thread);
+	if (_thread != &main_thread) {
+		// free(_thread->uc.uc_stack.ss_sp);
+		free(_thread);
+	}
 	return 0;
 }
 
@@ -145,22 +151,26 @@ void thread_exit(void* retval)
 {
 	struct thread* thread = (struct thread*)thread_self();
 
-	if (thread == &main_thread) {
-		exit((int)((intptr_t)retval));
-	}
+	int last_element = queue__has_one_element(&queue);
 
 	if (queue__pop(&queue) != thread) {
 		error("thread_exit queue__pop");
 		exit(-1);
 	}
 
-	VALGRIND_STACK_DEREGISTER(thread->valgrind_stackid);
+	if (thread != &main_thread) {
+		VALGRIND_STACK_DEREGISTER(thread->valgrind_stackid);
+	}
 
 	thread->return_value = retval;
 	thread->finished = 1;
 
-	if (setcontext(&((struct thread*)queue__top(&queue))->uc) != 0) {
-		error("thread_exit set_context");
+	if (last_element)
+		exit((int)(intptr_t)retval);
+	else {
+		if (setcontext(&((struct thread*)queue__top(&queue))->uc) != 0) {
+			error("thread_exit set_context");
+		}
+		exit(-1);
 	}
-	exit(-1);
 }
