@@ -5,7 +5,7 @@ VALGRIND_OPTIONS = --leak-check=full --show-reachable=yes --track-origins=yes
 LIB_PATH=install/lib
 BIN_PATH=install/bin
 
-BINS:= $(wildcard tst/*.c)
+BINS:= tst/01-main.c tst/02-switch.c tst/03-equity.c tst/11-join.c tst/12-join-main.c tst/21-create-many.c tst/22-create-many-recursive.c tst/23-create-many-once.c tst/31-switch-many.c tst/32-switch-many-join.c tst/33-switch-many-cascade.c tst/51-fibonacci.c #$(wildcard tst/*.c)
 BINS_PTHREAD:= $(BINS)
 BINS:=$(BINS:tst/%.c=$(BIN_PATH)/%)
 BINS_PTHREAD:=$(BINS_PTHREAD:tst/%.c=$(BIN_PATH)/%-pthread)
@@ -43,9 +43,9 @@ check: test
 	install/bin/21-create-many 1000
 	install/bin/22-create-many-recursive 1000
 	install/bin/23-create-many-once 1000
-	install/bin/31-switch-many 1000
-	install/bin/32-switch-many-join 100
-	install/bin/33-switch-many-cascade 100
+	install/bin/31-switch-many 1000 1000
+	install/bin/32-switch-many-join 100 100
+	install/bin/33-switch-many-cascade 100 100
 	install/bin/51-fibonacci 20
 
 valgrind: test
