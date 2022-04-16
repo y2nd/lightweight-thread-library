@@ -58,18 +58,18 @@ $(BIN_PATH)/%-pthread: tst/%.c
 test: $(BINS)
 	
 check: test
-	install/bin/01-main
-	install/bin/02-switch
-	install/bin/03-equity
-	install/bin/11-join
-	install/bin/12-join-main
-	install/bin/21-create-many 1000
-	install/bin/22-create-many-recursive 1000
-	install/bin/23-create-many-once 1000
-	install/bin/31-switch-many 1000 1000
-	install/bin/32-switch-many-join 100 100
-	install/bin/33-switch-many-cascade 100 100
-	install/bin/51-fibonacci 20
+	install/bin/01-main$(SUFFIX)
+	install/bin/02-switch$(SUFFIX)
+	install/bin/03-equity$(SUFFIX)
+	install/bin/11-join$(SUFFIX)
+	install/bin/12-join-main$(SUFFIX)
+	install/bin/21-create-many$(SUFFIX) 1000
+	install/bin/22-create-many-recursive$(SUFFIX) 1000
+	install/bin/23-create-many-once$(SUFFIX) 1000
+	install/bin/31-switch-many$(SUFFIX) 1000 1000
+	install/bin/32-switch-many-join$(SUFFIX) 100 100
+	install/bin/33-switch-many-cascade$(SUFFIX) 100 100
+	install/bin/51-fibonacci$(SUFFIX) 20
 
 valgrind: $(BINS)
 	for x in ./install/bin/*; do echo "********************$$x********************"; valgrind $(VALGRIND_OPTIONS) $$x; done
