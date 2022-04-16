@@ -5,10 +5,9 @@ VALGRIND_OPTIONS = --leak-check=full --show-reachable=yes --track-origins=yes
 LIB_PATH=install/lib
 BIN_PATH=install/bin
 
-BINS:= tst/01-main.c tst/02-switch.c tst/03-equity.c tst/11-join.c tst/12-join-main.c tst/21-create-many.c tst/22-create-many-recursive.c tst/23-create-many-once.c tst/31-switch-many.c tst/32-switch-many-join.c tst/33-switch-many-cascade.c tst/51-fibonacci.c #$(wildcard tst/*.c)
-BINS_PTHREAD:= $(BINS)
-BINS:=$(BINS:tst/%.c=$(BIN_PATH)/%)
-BINS_PTHREAD:=$(BINS_PTHREAD:tst/%.c=$(BIN_PATH)/%-pthread)
+TST:= tst/01-main.c tst/02-switch.c tst/03-equity.c tst/11-join.c tst/12-join-main.c tst/21-create-many.c tst/22-create-many-recursive.c tst/23-create-many-once.c tst/31-switch-many.c tst/32-switch-many-join.c tst/33-switch-many-cascade.c tst/51-fibonacci.c #$(wildcard tst/*.c)
+BINS:=$(TST:tst/%.c=$(BIN_PATH)/%)
+BINS_PTHREAD:=$(TST:tst/%.c=$(BIN_PATH)/%-pthread)
 
 $(shell  mkdir -p $(LIB_PATH) $(BIN_PATH))
 
@@ -24,7 +23,7 @@ $(LIB_PATH)/libthread.so: src/thread.c src/queue.c
 	$(CC) $(CFLAGS) -c -fPIC src/queue.c  -o queue.o -Isrc
 	$(CC) $(CFLAGS) thread.o queue.o -shared -o $(LIB_PATH)/libthread.so
 
-install: $(LIB_PATH)/libthread.a
+install: $(LIB_PATH)/libthread.a $(BINS) $(BINS_PTHREAD)
 
 $(BIN_PATH)/%: tst/%.c $(LIB_PATH)/libthread.a
 #	$(CC) $(CFLAGS) -Isrc -o $@ -L$(LIB_PATH) $< -lthread  
@@ -48,16 +47,16 @@ check: test
 	install/bin/33-switch-many-cascade 100 100
 	install/bin/51-fibonacci 20
 
-valgrind: test
+valgrind: $(BINS)
 	for x in ./install/bin/*; do echo "********************$$x********************"; valgrind $(VALGRIND_OPTIONS) $$x; done
 
 pthreads: $(BINS_PTHREAD)
 	for x in ./install/bin/*-pthread; do echo $$x; $$x; done
 
 graphs: $(BINS) $(BINS_PTHREAD)
-	python graphs/plot.py
+	graphs/plot.sh
 
-.PHONY: all test clean install graphs
+.PHONY: all test clean install graphs valgrind
 
 clean:
 	rm -rf *.o *.so install/bin/ install/lib/
