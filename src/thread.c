@@ -177,7 +177,7 @@ void thread_exit(void* retval)
 			if (swapcontext(&main_thread.uc, &((struct thread*)queue__top(&queue))->uc) != 0) {
 				error("thread_exit set_context");
 			}
-			free(queue__top(&queue));
+			free(queue__pop(&queue));
 			exit((int)(intptr_t)main_thread.return_value);
 		} else {
 			VALGRIND_STACK_DEREGISTER(thread->valgrind_stackid);
