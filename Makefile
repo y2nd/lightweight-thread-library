@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -O3 -Wextra -Wpedantic
-VALGRIND_OPTIONS = --leak-check=full --show-reachable=yes --track-origins=yes
+VALGRIND_OPTIONS = --leak-check=full --show-reachable=yes --track-origins=yes -s
 
 LIB_PATH=install/lib
 BIN_PATH=install/bin
@@ -72,10 +72,44 @@ check: test
 	install/bin/51-fibonacci$(SUFFIX) 20
 
 valgrind: $(BINS)
-	for x in ./install/bin/*; do echo "********************$$x********************"; valgrind $(VALGRIND_OPTIONS) $$x; done
+	echo "****************************************"
+	valgrind $(VALGRIND_OPTIONS) install/bin/01-main$(SUFFIX)
+	echo "****************************************"
+	valgrind $(VALGRIND_OPTIONS) install/bin/02-switch$(SUFFIX)
+	echo "****************************************"
+	valgrind $(VALGRIND_OPTIONS) install/bin/03-equity$(SUFFIX)
+	echo "****************************************"
+	valgrind $(VALGRIND_OPTIONS) install/bin/11-join$(SUFFIX)
+	echo "****************************************"
+	valgrind $(VALGRIND_OPTIONS) install/bin/12-join-main$(SUFFIX)
+	echo "****************************************"
+	valgrind $(VALGRIND_OPTIONS) install/bin/21-create-many$(SUFFIX) 1000
+	echo "****************************************"
+	valgrind $(VALGRIND_OPTIONS) install/bin/22-create-many-recursive$(SUFFIX) 1000
+	echo "****************************************"
+	valgrind $(VALGRIND_OPTIONS) install/bin/23-create-many-once$(SUFFIX) 1000
+	echo "****************************************"
+	valgrind $(VALGRIND_OPTIONS) install/bin/31-switch-many$(SUFFIX) 1000 1000
+	echo "****************************************"
+	valgrind $(VALGRIND_OPTIONS) install/bin/32-switch-many-join$(SUFFIX) 100 100
+	echo "****************************************"
+	valgrind $(VALGRIND_OPTIONS) install/bin/33-switch-many-cascade$(SUFFIX) 100 100
+	echo "****************************************"
+	valgrind $(VALGRIND_OPTIONS) install/bin/51-fibonacci$(SUFFIX) 20
 
 pthreads: $(BINS_PTHREAD)
-	for x in ./install/bin/*-pthread; do echo $$x; $$x; done
+	install/bin/01-main$(SUFFIX)-pthread
+	install/bin/02-switch$(SUFFIX)-pthread
+	install/bin/03-equity$(SUFFIX)-pthread
+	install/bin/11-join$(SUFFIX)-pthread
+	install/bin/12-join-main$(SUFFIX)-pthread
+	install/bin/21-create-many$(SUFFIX)-pthread 1000
+	install/bin/22-create-many-recursive$(SUFFIX)-pthread 1000
+	install/bin/23-create-many-once$(SUFFIX)-pthread 1000
+	install/bin/31-switch-many$(SUFFIX)-pthread 1000 1000
+	install/bin/32-switch-many-join$(SUFFIX)-pthread 100 100
+	install/bin/33-switch-many-cascade$(SUFFIX)-pthread 100 100
+	install/bin/51-fibonacci$(SUFFIX)-pthread 20
 
 graphs: $(BINS) $(BINS_PTHREAD)
 	graphs/plot.sh
