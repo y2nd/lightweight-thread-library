@@ -29,11 +29,6 @@ int queue__add(struct queue* queue, void* x)
 	return 0;
 }
 
-void* queue__top(struct queue* queue)
-{
-	return queue->top->value;
-}
-
 void* queue__pop(struct queue* queue)
 {
 	struct node* top_node = queue->top;
@@ -49,28 +44,9 @@ void* queue__pop(struct queue* queue)
 	return return_value;
 }
 
-int queue__roll(struct queue* queue)
-{
-	// assert(queue->top != &sentinel);
-
-	queue->end->next = queue->top;
-
-	queue->top = queue->top->next;
-
-	queue->end = queue->end->next;
-	queue->end->next = &sentinel;
-
-	return 0;
-}
-
 void queue__release(struct queue* queue)
 {
 	(void)queue;
-}
-
-int queue__has_one_element(struct queue* queue)
-{
-	return (queue->top == queue->end);
 }
 
 #else
@@ -134,11 +110,6 @@ int queue__add(struct queue* queue, void* x)
 	return 0;
 }
 
-void* queue__top(struct queue* queue)
-{
-	return queue->top->value;
-}
-
 /* Hypothèse : Il reste au moins un élément (sinon on peut rentre l'état incohérent) */
 void* queue__pop(struct queue* queue)
 {
@@ -153,6 +124,24 @@ void* queue__pop(struct queue* queue)
 	return return_value;
 }
 
+void queue__release(struct queue* queue)
+{
+	struct queue_pool* pool = queue->first_pool;
+	struct queue_pool* temp;
+	while (pool) {
+		temp = pool;
+		pool = pool->next;
+		free(temp);
+	}
+}
+
+#endif
+
+void* queue__top(struct queue* queue)
+{
+	return queue->top->value;
+}
+
 int queue__roll(struct queue* queue)
 {
 	queue->end->next = queue->top;
@@ -165,20 +154,7 @@ int queue__roll(struct queue* queue)
 	return 0;
 }
 
-void queue__release(struct queue* queue)
-{
-	struct queue_pool* pool = queue->first_pool;
-	struct queue_pool* temp;
-	while (pool) {
-		temp = pool;
-		pool = pool->next;
-		free(temp);
-	}
-}
-
 int queue__has_one_element(struct queue* queue)
 {
 	return (queue->top == queue->end);
 }
-
-#endif
