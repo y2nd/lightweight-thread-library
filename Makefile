@@ -22,7 +22,7 @@ define \n
 endef
 
 # Gestion des options
-OPTIONS:=SCHED USE_CTOR Q_LOOP Q_MEM_POOL Q_MEM_POOL_G T_MEM_POOL T_MEM_POOL_G STATIC_LINK
+OPTIONS:=SCHED USE_CTOR Q_LOOP Q_MEM_POOL Q_MEM_POOL_G T_MEM_POOL T_MEM_POOL_G STATIC_LINKING
 SUFFIX:=
 
 $(eval $(foreach OPTION,$(OPTIONS),ifdef $(OPTION)${\n}\
@@ -30,6 +30,10 @@ $(eval $(foreach OPTION,$(OPTIONS),ifdef $(OPTION)${\n}\
 	CFLAGS:=-D$(OPTION)=$(shell echo $($(OPTION)) | tr a-z A-Z) $$(CFLAGS)${\n}\
 endif${\n}\
 ))
+
+ifdef STATIC_LINKING
+	THREAD_LIBRARY=$(STATIC_LIBRARY)
+endif
 
 BINS:=$(BINS:$(BIN_PATH)/%=$(BIN_PATH)/%$(SUFFIX))
 STATIC_LIBRARY:=$(LIB_PATH)/libthread$(SUFFIX).a
