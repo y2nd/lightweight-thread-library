@@ -1,2 +1,5 @@
 install
 *.o
+graphs/*.png
+graphs/plot
+graphs/data*
