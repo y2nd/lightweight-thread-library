@@ -151,28 +151,42 @@ int thread_join(thread_t thread, void** retval)
 
 void thread_exit(void* retval)
 {
-	struct thread* thread = (struct thread*)thread_self();
+	struct thread* thread;
 
 	int last_element = queue__has_one_element(&queue);
 
-	if (queue__pop(&queue) != thread) {
-		error("thread_exit queue__pop");
-		exit(-1);
-	}
+	if (last_element) {
+		thread = queue__top(&queue);
 
-	if (thread != &main_thread) {
-		VALGRIND_STACK_DEREGISTER(thread->valgrind_stackid);
-	}
-
-	thread->return_value = retval;
-	thread->finished = 1;
-
-	if (last_element)
-		exit((int)(intptr_t)retval);
-	else {
-		if (setcontext(&((struct thread*)queue__top(&queue))->uc) != 0) {
-			error("thread_exit set_context");
+		if (thread == &main_thread) {
+			exit((int)(intptr_t)retval);
+		} else {
+			VALGRIND_STACK_DEREGISTER(thread->valgrind_stackid);
+			main_thread.return_value = retval;
+			if (setcontext(&main_thread.uc) != 0) {
+				error("thread_exit set_context");
+			}
+			exit(-1);
 		}
-		exit(-1);
+	} else {
+		thread = queue__pop(&queue);
+
+		if (thread == &main_thread) {
+			main_thread.return_value = retval;
+			main_thread.finished = 1;
+			if (swapcontext(&main_thread.uc, &((struct thread*)queue__top(&queue))->uc) != 0) {
+				error("thread_exit set_context");
+			}
+			free(queue__top(&queue));
+			exit((int)(intptr_t)main_thread.return_value);
+		} else {
+			VALGRIND_STACK_DEREGISTER(thread->valgrind_stackid);
+			thread->return_value = retval;
+			thread->finished = 1;
+			if (setcontext(&((struct thread*)queue__top(&queue))->uc) != 0) {
+				error("thread_exit set_context");
+			}
+			exit(-1);
+		}
 	}
 }
