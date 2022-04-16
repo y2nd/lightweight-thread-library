@@ -5,27 +5,51 @@ VALGRIND_OPTIONS = --leak-check=full --show-reachable=yes --track-origins=yes
 LIB_PATH=install/lib
 BIN_PATH=install/bin
 
-TST:= tst/01-main.c tst/02-switch.c tst/03-equity.c tst/11-join.c tst/12-join-main.c tst/21-create-many.c tst/22-create-many-recursive.c tst/23-create-many-once.c tst/31-switch-many.c tst/32-switch-many-join.c tst/33-switch-many-cascade.c tst/51-fibonacci.c #$(wildcard tst/*.c)
+TST:=tst/01-main.c tst/02-switch.c tst/03-equity.c tst/11-join.c tst/12-join-main.c tst/21-create-many.c tst/22-create-many-recursive.c tst/23-create-many-once.c tst/31-switch-many.c tst/32-switch-many-join.c tst/33-switch-many-cascade.c tst/51-fibonacci.c #$(wildcard tst/*.c)
 BINS:=$(TST:tst/%.c=$(BIN_PATH)/%)
 BINS_PTHREAD:=$(TST:tst/%.c=$(BIN_PATH)/%-pthread)
 
-$(shell  mkdir -p $(LIB_PATH) $(BIN_PATH))
+STATIC_LIBRARY:=$(LIB_PATH)/libthread.a
+DYNAMIC_LIBRARY:=$(LIB_PATH)/libthread.so
+
+THREAD_LIBRARY=$(DYNAMIC_LIBRARY)
+
+$(shell mkdir -p $(LIB_PATH) $(BIN_PATH))
+
+define \n
+
+
+endef
+
+# Gestion des options
+OPTIONS:=SCHED USE_CTOR Q_LOOP Q_MEM_POOL Q_MEM_POOL_G T_MEM_POOL T_MEM_POOL_G STATIC_LINK
+SUFFIX:=
+
+$(eval $(foreach OPTION,$(OPTIONS),ifdef $(OPTION)${\n}\
+	SUFFIX:=-$(shell echo $(OPTION)_$($(OPTION)) | tr A-Z a-z)$$(SUFFIX)${\n}\
+	CFLAGS:=-D$(OPTION)=$(shell echo $($(OPTION)) | tr a-z A-Z) $$(CFLAGS)${\n}\
+endif${\n}\
+))
+
+BINS:=$(BINS:$(BIN_PATH)/%=$(BIN_PATH)/%$(SUFFIX))
+STATIC_LIBRARY:=$(LIB_PATH)/libthread$(SUFFIX).a
+DYNAMIC_LIBRARY:=$(LIB_PATH)/libthread$(SUFFIX).so
 
 all: install test
 
-$(LIB_PATH)/libthread.a: src/thread.c src/queue.c
+$(STATIC_LIBRARY): src/thread.c src/queue.c
 	$(CC) $(CFLAGS) -c src/thread.c -o thread.o -Isrc
 	$(CC) $(CFLAGS) -c src/queue.c  -o queue.o -Isrc
 	ar rc $@ thread.o queue.o
 
-$(LIB_PATH)/libthread.so: src/thread.c src/queue.c
+$(DYNAMIC_LIBRARY): src/thread.c src/queue.c
 	$(CC) $(CFLAGS) -c -fPIC src/thread.c -o thread.o -Isrc
 	$(CC) $(CFLAGS) -c -fPIC src/queue.c  -o queue.o -Isrc
-	$(CC) $(CFLAGS) thread.o queue.o -shared -o $(LIB_PATH)/libthread.so
+	$(CC) $(CFLAGS) thread.o queue.o -shared -o $(DYNAMIC_LIBRARY)
 
-install: $(LIB_PATH)/libthread.a $(BINS) $(BINS_PTHREAD)
+install: $(BINS) $(BINS_PTHREAD)
 
-$(BIN_PATH)/%: tst/%.c $(LIB_PATH)/libthread.a
+$(BIN_PATH)/%$(SUFFIX): tst/%.c $(THREAD_LIBRARY)
 #	$(CC) $(CFLAGS) -Isrc -o $@ -L$(LIB_PATH) $< -lthread  
 	$(CC) $(CFLAGS) -Isrc -o $@ $^
 $(BIN_PATH)/%-pthread: tst/%.c
