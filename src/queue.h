@@ -10,12 +10,7 @@ struct node {
 	struct node* next;
 };
 
-#ifndef Q_MEM_POOL
-struct queue {
-	struct node *top, *end;
-	struct node base; // Node which won't be removed (for main thread)
-};
-#else
+#if Q_MEM_POOL
 struct queue_pool {
 	struct queue_pool* next;
 	struct node array[];
@@ -27,6 +22,11 @@ struct queue {
 	struct queue_pool *first_pool, *last_pool;
 	struct node *first_empty, *last_empty;
 	size_t free_space, last_pool_size;
+};
+#else
+struct queue {
+	struct node *top, *end;
+	struct node base; // Node which won't be removed (for main thread)
 };
 #endif
 

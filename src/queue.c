@@ -4,52 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifndef Q_MEM_POOL
-struct node sentinel = {NULL, NULL};
-
-int queue__init(struct queue* queue, void* base)
-{
-	queue->base.next = &sentinel;
-	queue->base.value = base;
-	queue->top = &queue->base;
-	queue->end = &queue->base;
-}
-
-int queue__add(struct queue* queue, void* x)
-{
-	struct node* new_node = malloc(sizeof(struct node));
-	if (!new_node)
-		return -1;
-	new_node->next = &sentinel;
-	new_node->value = x;
-
-	queue->end->next = new_node;
-	queue->end = new_node;
-
-	return 0;
-}
-
-void* queue__pop(struct queue* queue)
-{
-	struct node* top_node = queue->top;
-	queue->top = top_node->next;
-
-	void* return_value = top_node->value;
-
-	if (top_node != &queue->base)
-		free(top_node);
-
-	// assert(queue->top != &sentinel);
-
-	return return_value;
-}
-
-void queue__release(struct queue* queue)
-{
-	(void)queue;
-}
-
-#else
+#if Q_MEM_POOL
 
 struct node sentinel = {NULL, NULL};
 
@@ -133,6 +88,54 @@ void queue__release(struct queue* queue)
 		pool = pool->next;
 		free(temp);
 	}
+}
+
+#else
+
+struct node sentinel = {NULL, NULL};
+
+int queue__init(struct queue* queue, void* base)
+{
+	queue->base.next = &sentinel;
+	queue->base.value = base;
+	queue->top = &queue->base;
+	queue->end = &queue->base;
+
+	return 0;
+}
+
+int queue__add(struct queue* queue, void* x)
+{
+	struct node* new_node = malloc(sizeof(struct node));
+	if (!new_node)
+		return -1;
+	new_node->next = &sentinel;
+	new_node->value = x;
+
+	queue->end->next = new_node;
+	queue->end = new_node;
+
+	return 0;
+}
+
+void* queue__pop(struct queue* queue)
+{
+	struct node* top_node = queue->top;
+	queue->top = top_node->next;
+
+	void* return_value = top_node->value;
+
+	if (top_node != &queue->base)
+		free(top_node);
+
+	// assert(queue->top != &sentinel);
+
+	return return_value;
+}
+
+void queue__release(struct queue* queue)
+{
+	(void)queue;
 }
 
 #endif
