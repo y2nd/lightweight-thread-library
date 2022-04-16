@@ -1,5 +1,7 @@
 #include "thread.h"
 
+#include "config.h"
+
 #include "queue.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,7 +11,7 @@
 #include <errno.h>
 #include <stdint.h>
 
-#ifdef __GNUC__
+#if defined(__GNUC__) && USE_CTOR
 	#define INIT_QUEUE_IF_NEEDED
 	#define INIT_QUEUE_IF_NEEDED_RETURN
 	#define CONSTRUCTOR __attribute__((constructor))
