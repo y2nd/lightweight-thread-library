@@ -41,6 +41,9 @@
 #ifndef Q_MEM_POOL_G
 	#define Q_MEM_POOL_G EXPONENTIAL
 #endif
+#ifndef Q_MEM_POOL_FS
+	#define Q_MEM_POOL_FS 10
+#endif
 
 /* Memory Pool pour les threads */
 /* Value : 0 or 1 */
@@ -50,6 +53,9 @@
 #endif
 #ifndef T_MEM_POOL_G
 	#define T_MEM_POOL_G EXPONENTIAL
+#endif
+#ifndef T_MEM_POOL_FS
+	#define T_MEM_POOL_FS 10
 #endif
 
 #include "config_verifs.h"
