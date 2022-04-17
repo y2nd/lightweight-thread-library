@@ -13,14 +13,14 @@
 	- FIFO : les threads qui join quittent la file et rejoignent la fin de file quand leur cible se finit
 */
 #ifndef SCHED
-	#define SCHED BASIC
+	#define SCHED FIFO
 #endif
 
 /* Use constructor/destructor attribute */
 /* Value :
-	 - NO : Don't use it
-	 - YES : Use it if possible
-	 - FORCE : Force use it (if not possible => error)
+	- NO : Don't use it
+	- YES : Use it if possible
+	- FORCE : Force use it (if not possible => error)
 */
 #ifndef USE_CTOR
 	#define USE_CTOR YES
