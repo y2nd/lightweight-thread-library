@@ -38,6 +38,9 @@ struct thread {
 	int valgrind_stackid;
 	void* return_value; // Ou next
 	int finished;
+#if SCHED == FIFO
+	struct thread* joiner;
+#endif
 	const char stack[64 * 1024];
 };
 
@@ -172,6 +175,9 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 		error("thread_create malloc is null");
 		return -1;
 	}
+#if SCHED == FIFO
+	thread->joiner = NULL;
+#endif
 	thread->uc.uc_link = NULL; // WARN : (sizeof(ucontext_t));
 	thread->valgrind_stackid = VALGRIND_STACK_REGISTER(thread->uc.uc_stack.ss_sp, thread->uc.uc_stack.ss_sp + thread->uc.uc_stack.ss_size);
 	thread->finished = 0;
@@ -205,8 +211,18 @@ int thread_yield(void)
 int thread_join(thread_t thread, void** retval)
 {
 	struct thread* _thread = (struct thread*)thread;
+#if SCHED == BASIC
 	while (_thread->finished != 1)
 		thread_yield();
+#elif SCHED == FIFO
+	if (_thread->finished != 1) {
+		_thread->joiner = queue__pop(&queue); // Le joiner s'enlève de la file
+		if (swapcontext(&(_thread->joiner->uc), &((struct thread*)queue__top(&queue))->uc) != 0) {
+			error("thread_yield swapcontext");
+			return -1;
+		}
+	}
+#endif
 
 	if (retval)
 		*retval = _thread->return_value;
@@ -223,13 +239,21 @@ int thread_join(thread_t thread, void** retval)
 
 void thread_exit(void* retval)
 {
-	struct thread* thread;
+	struct thread* thread = queue__top(&queue);
 
-	int last_element = queue__has_one_element(&queue);
+	int last_element;
+
+#if SCHED == BASIC
+	last_element = queue__has_one_element(&queue);
+#elif SCHED == FIFO
+	if (thread->joiner) {
+		last_element = 0;
+		queue__add(&queue, thread->joiner); // On ajoute le joiner à la fin
+	} else
+		last_element = queue__has_one_element(&queue);
+#endif
 
 	if (last_element) {
-		thread = queue__top(&queue);
-
 		if (thread == &main_thread) {
 			exit((int)(intptr_t)retval);
 		} else {
@@ -241,8 +265,7 @@ void thread_exit(void* retval)
 			exit(-1);
 		}
 	} else {
-		thread = queue__pop(&queue);
-
+		queue__pop(&queue);
 		if (thread == &main_thread) {
 			main_thread.return_value = retval;
 			main_thread.finished = 1;
