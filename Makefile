@@ -57,7 +57,7 @@ $(BIN_PATH)/%$(SUFFIX): tst/%.c $(THREAD_LIBRARY)
 #	$(CC) $(CFLAGS) -Isrc -o $@ -L$(LIB_PATH) $< -lthread  
 	$(CC) $(CFLAGS) -Isrc -o $@ $^
 $(BIN_PATH)/%-pthread: tst/%.c
-	$(CC) $(CFLAGS) -Isrc -DUSE_PTHREAD $< -o $@ 
+	$(CC) $(CFLAGS) -Isrc -DUSE_PTHREAD $< -o $@ -lpthread
 
 test: $(BINS)
 	
