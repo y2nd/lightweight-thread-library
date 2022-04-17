@@ -36,9 +36,25 @@ void error(const char* prefix)
 struct thread {
 	ucontext_t uc;
 	int valgrind_stackid;
-	void* return_value;
+	void* return_value; // Ou next
 	int finished;
+	const char stack[64 * 1024];
 };
+
+#if T_MEM_POOL
+struct thread_pool {
+	struct thread_pool* next;
+	struct thread array[];
+};
+
+struct threads {
+	struct thread_pool *first_pool, *last_pool;
+	struct thread *first_empty, *last_empty;
+	size_t free_space, last_pool_size;
+};
+
+struct threads threads;
+#endif
 
 struct queue queue;
 int is_initialized = 0;
@@ -48,6 +64,15 @@ struct thread main_thread;
 static void DESTRUCTOR release_main_thread()
 {
 	queue__release(&queue);
+#if T_MEM_POOL
+	struct thread_pool* pool = threads.first_pool;
+	struct thread_pool* temp;
+	while (pool) {
+		temp = pool;
+		pool = pool->next;
+		free(temp);
+	}
+#endif
 }
 
 static int CONSTRUCTOR init_main_thread_if_needed()
@@ -63,6 +88,20 @@ static int CONSTRUCTOR init_main_thread_if_needed()
 		queue__init(&queue, &main_thread);
 
 		is_initialized = 1;
+
+#if T_MEM_POOL
+		threads.first_pool = malloc(sizeof(struct thread_pool) + T_MEM_POOL_FS * sizeof(struct thread));
+		if (!threads.first_pool) {
+			printf("init_main_thread_if_needed erreur malloc\n");
+			return -1;
+		}
+		threads.first_pool->next = NULL;
+		threads.last_pool = threads.first_pool;
+		threads.first_empty = NULL;
+		threads.last_empty = &threads.first_pool->array[0];
+		threads.free_space = T_MEM_POOL_FS;
+		threads.last_pool_size = T_MEM_POOL_FS;
+#endif
 
 #ifndef __GNUC__
 		atexit(release_main_thread);
@@ -88,7 +127,36 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 
 	// TODO : Ajouter le thread en 2 position, il va très rapidement servir
 
-	struct thread* thread = malloc(sizeof(struct thread) + 64 * 1024);
+#if T_MEM_POOL
+	struct thread* thread;
+	if ((thread = threads.first_empty)) {
+		threads.first_empty = threads.first_empty->return_value; // return_value = next ici
+	} else if (threads.free_space) {
+		thread = threads.last_empty;
+		threads.last_empty += 1;
+		threads.free_space -= 1;
+	} else {
+	#if T_MEM_POOL_G == EXPONENTIAL
+		threads.last_pool_size *= T_MEM_POOL_FS;
+	#elif T_MEM_POOL_G == LINEAR
+		threads.last_pool_size += T_MEM_POOL_FS;
+	#elif T_MEM_POOL_G == CONSTANT
+			// Do nothing (threads.last_pool_size = T_MEM_POOL_FS)
+	#endif
+		threads.last_pool->next = malloc(sizeof(struct thread_pool) + threads.last_pool_size * sizeof(struct thread));
+		if (!threads.last_pool->next) {
+			printf("thread_create erreur malloc\n");
+			return -1;
+		}
+		threads.last_pool = threads.last_pool->next;
+		threads.last_pool->next = NULL;
+		threads.free_space = threads.last_pool_size - 1;
+		thread = &threads.last_pool->array[0];
+		threads.last_empty = &threads.last_pool->array[1];
+	}
+#else
+	struct thread* thread = malloc(sizeof(struct thread));
+#endif
 	if (!thread) {
 		error("thread_create malloc is null");
 		return -1;
@@ -99,7 +167,7 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 		return -1;
 	}
 	thread->uc.uc_stack.ss_size = 64 * 1024;
-	thread->uc.uc_stack.ss_sp = thread + 1;
+	thread->uc.uc_stack.ss_sp = (void*)thread->stack;
 	if (!thread->uc.uc_stack.ss_sp) {
 		error("thread_create malloc is null");
 		return -1;
@@ -143,8 +211,12 @@ int thread_join(thread_t thread, void** retval)
 	if (retval)
 		*retval = _thread->return_value;
 	if (_thread != &main_thread) {
-		// free(_thread->uc.uc_stack.ss_sp);
+#if T_MEM_POOL
+		_thread->return_value = threads.first_empty; // return_value = next ici
+		threads.first_empty = _thread;
+#else
 		free(_thread);
+#endif
 	}
 	return 0;
 }
@@ -177,7 +249,10 @@ void thread_exit(void* retval)
 			if (swapcontext(&main_thread.uc, &((struct thread*)queue__top(&queue))->uc) != 0) {
 				error("thread_exit set_context");
 			}
+			// Pas besoin de laisser la pool de thread avec un bon first_empty
+#if !T_MEM_POOL
 			free(queue__pop(&queue));
+#endif
 			exit((int)(intptr_t)main_thread.return_value);
 		} else {
 			VALGRIND_STACK_DEREGISTER(thread->valgrind_stackid);
