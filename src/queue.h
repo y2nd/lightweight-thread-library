@@ -53,4 +53,7 @@ void queue__release(struct queue* queue);
 // Checks whether the queue has only one element
 int queue__has_one_element(struct queue* queue);
 
+// Shows queue content
+void queue__print(struct queue* queue);
+
 #endif /* __QUEUE_H__ */

@@ -3,10 +3,9 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 
-#if !Q_LOOP
 struct node sentinel = {NULL, NULL};
-#endif
 
 #if Q_MEM_POOL
 
@@ -75,7 +74,7 @@ int queue__add(struct queue* queue, void* x)
 	return 0;
 }
 
-/* Hypothèse : Il reste au moins un élément (sinon on peut rentre l'état incohérent) */
+/* Hypothèse : Il reste au moins un élément après pop (sinon on peut rendre l'état incohérent) */
 void* queue__pop(struct queue* queue)
 {
 	struct node* top_node = queue->top;
@@ -122,6 +121,8 @@ int queue__init(struct queue* queue, void* base)
 
 int queue__add(struct queue* queue, void* x)
 {
+	assert(queue->top != &sentinel);
+
 	struct node* new_node = malloc(sizeof(struct node));
 	if (!new_node)
 		return -1;
@@ -138,12 +139,15 @@ int queue__add(struct queue* queue, void* x)
 	return 0;
 }
 
+/* Hypothèse : Il reste au moins un élément après pop (sinon on peut rendre l'état incohérent) */
 void* queue__pop(struct queue* queue)
 {
 	struct node* top_node = queue->top;
 	queue->top = top_node->next;
 
 	#if Q_LOOP
+	if (top_node == queue->end)
+		queue->top = &sentinel;
 	queue->end->next = top_node->next;
 	#endif
 
@@ -159,7 +163,24 @@ void* queue__pop(struct queue* queue)
 
 void queue__release(struct queue* queue)
 {
-	(void)queue;
+	struct node* node = queue->top;
+	struct node* temp;
+	#if Q_LOOP
+	if (node != &sentinel)
+		do {
+			temp = node;
+			node = node->next;
+			if (temp != &queue->base)
+				free(temp);
+		} while (node != queue->top);
+	#else
+	while (node != &sentinel) {
+		temp = node;
+		node = node->next;
+		if (temp != &queue->base)
+			free(temp);
+	}
+	#endif
 }
 
 #endif
@@ -189,4 +210,21 @@ int queue__roll(struct queue* queue)
 int queue__has_one_element(struct queue* queue)
 {
 	return (queue->top == queue->end);
+}
+
+void queue__print(struct queue* queue)
+{
+	struct node* node = queue->top;
+	int i = 0;
+	printf("-----\n");
+	do {
+		printf("%d : %p\n", i, node->value);
+		i += 1;
+		node = node->next;
+	} while (node != &sentinel && node != queue->top);
+
+	if (node == &sentinel)
+		printf("S####\n");
+	else
+		printf("T####\n");
 }
