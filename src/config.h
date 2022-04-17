@@ -36,7 +36,7 @@
 /* Value : 0 or 1 */
 /* Growth Value : constant, linear or exponential */
 #ifndef Q_MEM_POOL
-	#define Q_MEM_POOL YES
+	#define Q_MEM_POOL NO
 #endif
 #ifndef Q_MEM_POOL_G
 	#define Q_MEM_POOL_G EXPONENTIAL
@@ -49,7 +49,7 @@
 /* Value : 0 or 1 */
 /* Growth Value : constant, linear or exponential */
 #ifndef T_MEM_POOL
-	#define T_MEM_POOL YES
+	#define T_MEM_POOL NO
 #endif
 #ifndef T_MEM_POOL_G
 	#define T_MEM_POOL_G EXPONENTIAL
