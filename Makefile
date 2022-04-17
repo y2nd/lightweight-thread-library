@@ -118,6 +118,9 @@ pthreads: $(BINS_PTHREAD)
 graphs: $(BINS) $(BINS_PTHREAD)
 	graphs/plot.sh
 
+clean_graphs:
+	rm -rf graphs/data* graphs/*.png
+
 .PHONY: all test clean install graphs valgrind
 
 clean:
