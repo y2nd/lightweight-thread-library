@@ -13,11 +13,6 @@
 usage : ./plot {<nb> {<commande>}}
 */
 
-// TODO : Parker la mesure dans une fonction
-// TODO : Rediriger les flux du child process vers /dev/null
-// TODO : Effectuer plusieurs mesures, les stocker puis les mettre dans le bon fichier
-// TODO : Mettre une liste par défaut des tests à réaliser
-
 void write_plot(const char* filename, unsigned int nb, unsigned int nb_exp, char* argv[])
 {
 	pid_t pid;
