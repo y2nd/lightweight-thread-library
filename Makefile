@@ -9,11 +9,6 @@ TST:=tst/01-main.c tst/02-switch.c tst/03-equity.c tst/11-join.c tst/12-join-mai
 BINS:=$(TST:tst/%.c=$(BIN_PATH)/%)
 BINS_PTHREAD:=$(TST:tst/%.c=$(BIN_PATH)/%-pthread)
 
-STATIC_LIBRARY:=$(LIB_PATH)/libthread.a
-DYNAMIC_LIBRARY:=$(LIB_PATH)/libthread.so
-
-THREAD_LIBRARY=$(DYNAMIC_LIBRARY)
-
 $(shell mkdir -p $(LIB_PATH) $(BIN_PATH))
 
 define \n
@@ -33,11 +28,15 @@ endif${\n}\
 
 ifdef STATIC_LINKING
 	THREAD_LIBRARY=$(STATIC_LIBRARY)
+	LIBRARY_OPTIONS=libthread$(SUFFIX).a
 endif
 
 BINS:=$(BINS:$(BIN_PATH)/%=$(BIN_PATH)/%$(SUFFIX))
 STATIC_LIBRARY:=$(LIB_PATH)/libthread$(SUFFIX).a
 DYNAMIC_LIBRARY:=$(LIB_PATH)/libthread$(SUFFIX).so
+
+THREAD_LIBRARY=$(DYNAMIC_LIBRARY)
+LIBRARY_OPTIONS=-L$(LIB_PATH) -lthread$(SUFFIX)
 
 all: install test
 
@@ -55,25 +54,25 @@ install: $(BINS) $(BINS_PTHREAD)
 
 $(BIN_PATH)/%$(SUFFIX): tst/%.c $(THREAD_LIBRARY)
 #	$(CC) $(CFLAGS) -Isrc -o $@ -L$(LIB_PATH) $< -lthread  
-	$(CC) $(CFLAGS) -Isrc -o $@ $^
+	$(CC) $(CFLAGS) -Isrc -o $@ $< $(LIBRARY_OPTIONS)
 $(BIN_PATH)/%-pthread: tst/%.c
 	$(CC) $(CFLAGS) -Isrc -DUSE_PTHREAD $< -o $@ -lpthread
 
 test: $(BINS)
 	
 check: test
-	install/bin/01-main$(SUFFIX)
-	install/bin/02-switch$(SUFFIX)
-	install/bin/03-equity$(SUFFIX)
-	install/bin/11-join$(SUFFIX)
-	install/bin/12-join-main$(SUFFIX)
-	install/bin/21-create-many$(SUFFIX) 1000
-	install/bin/22-create-many-recursive$(SUFFIX) 1000
-	install/bin/23-create-many-once$(SUFFIX) 1000
-	install/bin/31-switch-many$(SUFFIX) 1000 1000
-	install/bin/32-switch-many-join$(SUFFIX) 100 100
-	install/bin/33-switch-many-cascade$(SUFFIX) 100 100
-	install/bin/51-fibonacci$(SUFFIX) 20
+	LD_LIBRARY_PATH=install/lib install/bin/01-main$(SUFFIX)
+	LD_LIBRARY_PATH=install/lib install/bin/02-switch$(SUFFIX)
+	LD_LIBRARY_PATH=install/lib install/bin/03-equity$(SUFFIX)
+	LD_LIBRARY_PATH=install/lib install/bin/11-join$(SUFFIX)
+	LD_LIBRARY_PATH=install/lib install/bin/12-join-main$(SUFFIX)
+	LD_LIBRARY_PATH=install/lib install/bin/21-create-many$(SUFFIX) 1000
+	LD_LIBRARY_PATH=install/lib install/bin/22-create-many-recursive$(SUFFIX) 1000
+	LD_LIBRARY_PATH=install/lib install/bin/23-create-many-once$(SUFFIX) 1000
+	LD_LIBRARY_PATH=install/lib install/bin/31-switch-many$(SUFFIX) 1000 1000
+	LD_LIBRARY_PATH=install/lib install/bin/32-switch-many-join$(SUFFIX) 100 100
+	LD_LIBRARY_PATH=install/lib install/bin/33-switch-many-cascade$(SUFFIX) 100 100
+	LD_LIBRARY_PATH=install/lib install/bin/51-fibonacci$(SUFFIX) 20
 
 valgrind: $(BINS)
 	echo "****************************************"
