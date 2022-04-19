@@ -39,7 +39,7 @@ void write_plot(const char* filename, unsigned int nb, unsigned int nb_exp, char
 				/* Child */
 				int fd = open("/dev/null", O_WRONLY | O_CREAT, 0666); // open the file /dev/null
 				dup2(fd, STDOUT_FILENO);
-				dup2(fd, STDERR_FILENO);
+				// dup2(fd, STDERR_FILENO);
 				execvp(argv[0], argv);
 				printf("Zone normalement non atteinte\n");
 				return;
