@@ -20,13 +20,13 @@ function test() {
     rm -rf "$SCRIPT_DIR/data_$EXEC" "$SCRIPT_DIR/data_$EXEC_PTHREAD"
 
     echo "$EXEC"
-    time taskset -c 0 $SCRIPT_DIR/plot "$SCRIPT_DIR/data_$EXEC" "$NB" "$NB_EXP" "$SCRIPT_DIR/../install/bin/$EXEC" $ARG
+    LD_LIBRARY_PATH="$SCRIPT_DIR/../install/lib/:$LD_LIBRARY_PATH" time taskset -c 0 $SCRIPT_DIR/plot "$SCRIPT_DIR/data_$EXEC" "$NB" "$NB_EXP" "$SCRIPT_DIR/../install/bin/$EXEC" $ARG
     echo "$EXEC_PTHREAD"
-    time taskset -c 0 $SCRIPT_DIR/plot "$SCRIPT_DIR/data_$EXEC_PTHREAD" "$NB" "$NB_EXP" "$SCRIPT_DIR/../install/bin/$EXEC_PTHREAD" $ARG
+    LD_LIBRARY_PATH="$SCRIPT_DIR/../install/lib/:$LD_LIBRARY_PATH" time taskset -c 0 $SCRIPT_DIR/plot "$SCRIPT_DIR/data_$EXEC_PTHREAD" "$NB" "$NB_EXP" "$SCRIPT_DIR/../install/bin/$EXEC_PTHREAD" $ARG
 
     [ -e "$SCRIPT_DIR/$TITLE.png" ] && mv "$SCRIPT_DIR/$TITLE.png" "$SCRIPT_DIR/$TITLE.old.png"
 
-    gnuplot -e "set terminal pngcairo size 1120,630 enhanced font 'Verdana,10'; set title '$EXEC vs $EXEC_PTHREAD'; set output '$SCRIPT_DIR/$TITLE.png'; set style data boxplot; set style boxplot medianlinewidth 2.0 nooutlier; set xtics ('Temps Réel' 1, 'Temps Réel Pthread' 2, 'Temps User' 3, 'Temps User Pthread' 4, 'Temps Système' 5, 'Temps Système Pthread' 6); plot '$SCRIPT_DIR/data_$EXEC' using (1.0):1 notitle, '$SCRIPT_DIR/data_$EXEC_PTHREAD' using (2.0):1 notitle, '$SCRIPT_DIR/data_$EXEC' using (3.0):2 notitle, '$SCRIPT_DIR/data_$EXEC_PTHREAD' using (4.0):2 notitle, '$SCRIPT_DIR/data_$EXEC' using (5.0):3 notitle, '$SCRIPT_DIR/data_$EXEC_PTHREAD' using (6.0):3 notitle"
+    gnuplot -e "set terminal pngcairo size 1120,630 enhanced font 'Verdana,10'; set title '$(echo $EXEC | sed 's/_/\\_/g') vs $(echo $EXEC_PTHREAD | sed 's/_/\_/g')'; set output '$SCRIPT_DIR/$TITLE.png'; set style data boxplot; set style boxplot medianlinewidth 2.0 nooutlier; set xtics ('Temps Réel' 1, 'Temps Réel Pthread' 2, 'Temps User' 3, 'Temps User Pthread' 4, 'Temps Système' 5, 'Temps Système Pthread' 6); plot '$SCRIPT_DIR/data_$EXEC' using (1.0):1 notitle, '$SCRIPT_DIR/data_$EXEC_PTHREAD' using (2.0):1 notitle, '$SCRIPT_DIR/data_$EXEC' using (3.0):2 notitle, '$SCRIPT_DIR/data_$EXEC_PTHREAD' using (4.0):2 notitle, '$SCRIPT_DIR/data_$EXEC' using (5.0):3 notitle, '$SCRIPT_DIR/data_$EXEC_PTHREAD' using (6.0):3 notitle"
 
 }
 
