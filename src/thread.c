@@ -301,10 +301,12 @@ void thread_exit(void* retval)
 			main_thread.finished = 1;
 
 			struct thread* thread_next = ((struct thread*)queue__top(&queue));
+#if SCHED == ECONOMY
 			while (thread_next->joining != 0) {
 				queue__roll(&queue);
 				thread_next = (struct thread*)queue__top(&queue);
 			}
+#endif
 
 			if (swapcontext(&main_thread.uc, &thread_next->uc) != 0) {
 				error("thread_exit set_context");
@@ -320,10 +322,12 @@ void thread_exit(void* retval)
 			thread->finished = 1;
 
 			struct thread* thread_next = ((struct thread*)queue__top(&queue));
+#if SCHED == ECONOMY
 			while (thread_next->joining != 0) {
 				queue__roll(&queue);
 				thread_next = (struct thread*)queue__top(&queue);
 			}
+#endif
 
 			if (setcontext(&thread_next->uc) != 0) {
 				error("thread_exit set_context");
