@@ -38,8 +38,11 @@ struct thread {
 	int valgrind_stackid;
 	void* return_value; // Ou next
 	int finished;
-#if SCHED == FIFO
+#if SCHED == FIFO || SCHED == ECONOMY
 	struct thread* joiner;
+#endif
+#if SCHED == ECONOMY
+	int joining;
 #endif
 	const char stack[64 * 1024];
 };
@@ -87,6 +90,13 @@ static int CONSTRUCTOR init_main_thread_if_needed()
 		}
 		main_thread.valgrind_stackid = -1;
 		main_thread.finished = 0;
+
+#if SCHED == FIFO || SCHED == ECONOMY
+		main_thread.joiner = NULL;
+#endif
+#if SCHED == ECONOMY
+		main_thread.joining = 0;
+#endif
 
 		queue__init(&queue, &main_thread);
 
@@ -175,8 +185,11 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 		error("thread_create malloc is null");
 		return -1;
 	}
-#if SCHED == FIFO
+#if SCHED == FIFO || SCHED == ECONOMY
 	thread->joiner = NULL;
+#endif
+#if SCHED == ECONOMY
+	thread->joining = 0;
 #endif
 	thread->uc.uc_link = NULL; // WARN : (sizeof(ucontext_t));
 	thread->valgrind_stackid = VALGRIND_STACK_REGISTER(thread->uc.uc_stack.ss_sp, thread->uc.uc_stack.ss_sp + thread->uc.uc_stack.ss_size);
@@ -198,9 +211,14 @@ int thread_yield(void)
 
 	queue__roll(&queue);
 
-	// TODO : Possibilité de s'économiser le swapcontext (si le thread attend sur un qui a pas fini, on swap pas)
-
-	if (swapcontext(&(thread_before->uc), &((struct thread*)queue__top(&queue))->uc) != 0) {
+	struct thread* thread_next = (struct thread*)queue__top(&queue);
+#if SCHED == ECONOMY
+	while (thread_next->joining != 0) {
+		queue__roll(&queue);
+		thread_next = (struct thread*)queue__top(&queue);
+	}
+#endif
+	if (swapcontext(&(thread_before->uc), &thread_next->uc) != 0) {
 		error("thread_yield swapcontext");
 		return -1;
 	}
@@ -214,13 +232,20 @@ int thread_join(thread_t thread, void** retval)
 #if SCHED == BASIC
 	while (_thread->finished != 1)
 		thread_yield();
-#elif SCHED == FIFO
+#elif SCHED == FIFO || SCHED == ECONOMY
 	if (_thread->finished != 1) {
+	#if SCHED == FIFO
 		_thread->joiner = queue__pop(&queue); // Le joiner s'enlève de la file
 		if (swapcontext(&(_thread->joiner->uc), &((struct thread*)queue__top(&queue))->uc) != 0) {
 			error("thread_yield swapcontext");
 			return -1;
 		}
+	#elif SCHED == ECONOMY
+		_thread->joiner = queue__top(&queue);
+		struct thread* self = thread_self();
+		self->joining = 1;
+		thread_yield();
+	#endif
 	}
 #endif
 
@@ -243,8 +268,13 @@ void thread_exit(void* retval)
 
 	int last_element;
 
-#if SCHED == BASIC
+#if SCHED == BASIC || SCHED == ECONOMY
 	last_element = queue__has_one_element(&queue);
+	#if SCHED == ECONOMY
+	if (thread->joiner) {
+		thread->joiner->joining = 0;
+	}
+	#endif
 #elif SCHED == FIFO
 	if (thread->joiner) {
 		last_element = 0;
@@ -269,7 +299,14 @@ void thread_exit(void* retval)
 		if (thread == &main_thread) {
 			main_thread.return_value = retval;
 			main_thread.finished = 1;
-			if (swapcontext(&main_thread.uc, &((struct thread*)queue__top(&queue))->uc) != 0) {
+
+			struct thread* thread_next = ((struct thread*)queue__top(&queue));
+			while (thread_next->joining != 0) {
+				queue__roll(&queue);
+				thread_next = (struct thread*)queue__top(&queue);
+			}
+
+			if (swapcontext(&main_thread.uc, &thread_next->uc) != 0) {
 				error("thread_exit set_context");
 			}
 			// Pas besoin de laisser la pool de thread avec un bon first_empty
@@ -281,7 +318,14 @@ void thread_exit(void* retval)
 			VALGRIND_STACK_DEREGISTER(thread->valgrind_stackid);
 			thread->return_value = retval;
 			thread->finished = 1;
-			if (setcontext(&((struct thread*)queue__top(&queue))->uc) != 0) {
+
+			struct thread* thread_next = ((struct thread*)queue__top(&queue));
+			while (thread_next->joining != 0) {
+				queue__roll(&queue);
+				thread_next = (struct thread*)queue__top(&queue);
+			}
+
+			if (setcontext(&thread_next->uc) != 0) {
 				error("thread_exit set_context");
 			}
 			exit(-1);

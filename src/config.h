@@ -11,9 +11,10 @@
 /* Value :
 	- BASIC : les threads qui join ne quittent pas la file et yield en boucle jusqu'à ce que leur cible se finit
 	- FIFO : les threads qui join quittent la file et rejoignent la fin de file quand leur cible se finit
+	- ECONOMY : comme BASIC mais on check si le thread est en attente avant de swapcontext dessus
 */
 #ifndef SCHED
-	#define SCHED FIFO
+	#define SCHED ECONOMY
 #endif
 
 /* Use constructor/destructor attribute */
