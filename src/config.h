@@ -14,7 +14,7 @@
 	- ECONOMY : comme BASIC mais on check si le thread est en attente avant de swapcontext dessus
 */
 #ifndef SCHED
-	#define SCHED ECONOMY
+	#define SCHED FIFO
 #endif
 
 /* Use constructor/destructor attribute */
