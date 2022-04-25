@@ -1,9 +1,9 @@
-CC = gcc
-CFLAGS = -Wall -O3 -Wextra -Wpedantic
-VALGRIND_OPTIONS = --leak-check=full --show-reachable=yes --track-origins=yes -s
+CC := gcc
+CFLAGS := -Wall -Ofast -march=native -flto -Wextra -Wpedantic
+VALGRIND_OPTIONS := --leak-check=full --show-reachable=yes --track-origins=yes -s
 
-LIB_PATH=install/lib
-BIN_PATH=install/bin
+LIB_PATH:=install/lib
+BIN_PATH:=install/bin
 
 TST:=tst/01-main.c tst/02-switch.c tst/03-equity.c tst/11-join.c tst/12-join-main.c tst/21-create-many.c tst/22-create-many-recursive.c tst/23-create-many-once.c tst/31-switch-many.c tst/32-switch-many-join.c tst/33-switch-many-cascade.c tst/44-reduction.c tst/51-fibonacci.c tst/61-mutex.c tst/62-mutex.c #$(wildcard tst/*.c)
 BINS:=$(TST:tst/%.c=$(BIN_PATH)/%)
@@ -17,7 +17,7 @@ define \n
 endef
 
 # Gestion des options
-OPTIONS:=SCHED USE_CTOR Q_LOOP Q_MEM_POOL Q_MEM_POOL_G T_MEM_POOL T_MEM_POOL_G STATIC_LINKING
+OPTIONS:=SCHED USE_CTOR Q_LOOP Q_MEM_POOL Q_MEM_POOL_G T_MEM_POOL T_MEM_POOL_G
 SUFFIX:=
 
 $(eval $(foreach OPTION,$(OPTIONS),ifdef $(OPTION)${\n}\
@@ -26,17 +26,38 @@ $(eval $(foreach OPTION,$(OPTIONS),ifdef $(OPTION)${\n}\
 endif${\n}\
 ))
 
+THREAD_LIBRARY=$(STATIC_LIBRARY)
+LIBRARY_OPTIONS=$(LIB_PATH)/libthread$(SUFFIX).a
+
 ifdef STATIC_LINKING
 	THREAD_LIBRARY=$(STATIC_LIBRARY)
-	LIBRARY_OPTIONS=libthread$(SUFFIX).a
+	LIBRARY_OPTIONS=$(LIB_PATH)/libthread$(SUFFIX).a
+	SUFFIX:=$(SUFFIX)-static
+endif
+
+ifdef DYNAMIC_LINKING
+	THREAD_LIBRARY=$(DYNAMIC_LIBRARY)
+	LIBRARY_OPTIONS=-L$(LIB_PATH) -lthread$(SUFFIX)
+	SUFFIX:=$(SUFFIX)-dynamic
+endif
+
+ifdef MAX_OPTI
+	SUFFIX:=$(SUFFIX)-max_opti
+	LIBRARY_OPTIONS:=src/thread.c src/queue.c
+endif
+
+ifdef NORMAL_OPTI
+	CFLAGS:= -Wall -O3 -Wextra -Wpedantic
+	SUFFIX:=$(SUFFIX)-normal_opti
+endif
+
+ifdef DEBUG
+	CFLAGS:= -Wall -Wextra -Wpedantic -Og -ggdb3
 endif
 
 BINS:=$(BINS:$(BIN_PATH)/%=$(BIN_PATH)/%$(SUFFIX))
 STATIC_LIBRARY:=$(LIB_PATH)/libthread$(SUFFIX).a
 DYNAMIC_LIBRARY:=$(LIB_PATH)/libthread$(SUFFIX).so
-
-THREAD_LIBRARY=$(DYNAMIC_LIBRARY)
-LIBRARY_OPTIONS=-L$(LIB_PATH) -lthread$(SUFFIX)
 
 all: install test
 
