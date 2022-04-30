@@ -5,7 +5,7 @@ VALGRIND_OPTIONS := --leak-check=full --show-reachable=yes --track-origins=yes -
 LIB_PATH:=install/lib
 BIN_PATH:=install/bin
 
-TST:=tst/01-main.c tst/02-switch.c tst/03-equity.c tst/11-join.c tst/12-join-main.c tst/21-create-many.c tst/22-create-many-recursive.c tst/23-create-many-once.c tst/31-switch-many.c tst/32-switch-many-join.c tst/33-switch-many-cascade.c tst/44-reduction.c tst/51-fibonacci.c tst/61-mutex.c tst/62-mutex.c #$(wildcard tst/*.c)
+TST:=tst/01-main.c tst/02-switch.c tst/03-equity.c tst/11-join.c tst/12-join-main.c tst/21-create-many.c tst/22-create-many-recursive.c tst/23-create-many-once.c tst/31-switch-many.c tst/32-switch-many-join.c tst/33-switch-many-cascade.c tst/44-reduction.c tst/51-fibonacci.c tst/61-mutex.c tst/62-mutex.c tst/77-merge-sort.c #$(wildcard tst/*.c)
 BINS:=$(TST:tst/%.c=$(BIN_PATH)/%)
 BINS_PTHREAD:=$(TST:tst/%.c=$(BIN_PATH)/%-pthread)
 
@@ -97,6 +97,7 @@ check: test
 	LD_LIBRARY_PATH=install/lib install/bin/51-fibonacci$(SUFFIX) 20
 	LD_LIBRARY_PATH=install/lib install/bin/61-mutex$(SUFFIX) 20
 	LD_LIBRARY_PATH=install/lib install/bin/62-mutex$(SUFFIX) 20
+	LD_LIBRARY_PATH=install/lib install/bin/77-merge-sort$(SUFFIX)
 
 valgrind: $(BINS)
 	echo "****************************************"
