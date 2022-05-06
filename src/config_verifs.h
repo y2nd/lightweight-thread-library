@@ -1,8 +1,12 @@
 #ifndef __CONFIG_VERIFS_H__
 #define __CONFIG_VERIFS_H__
 
-#if SCHED != BASIC && SCHED != FIFO && SCHED != ECONOMY && SCHED != PREEMPT
+#if SCHED != BASIC && SCHED != FIFO && SCHED != ECONOMY
 	#error Wrong value for SCHED
+#endif
+
+#if PREEMPT != NO && PREEMPT != YES
+	#error Wrong value for PREEMPT
 #endif
 
 #if USE_CTOR != NO && USE_CTOR != YES && USE_CTOR != FORCE

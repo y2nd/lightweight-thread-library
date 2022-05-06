@@ -3,3 +3,4 @@ install
 graphs/*.png
 graphs/plot
 graphs/data*
+.vscode/

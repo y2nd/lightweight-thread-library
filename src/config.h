@@ -17,6 +17,15 @@
 	#define SCHED FIFO
 #endif
 
+/* Use Preemption */
+/*
+	-NO : Don't use it
+	-YES : use it
+*/
+#ifndef PREEMPT
+	#define PREEMPT NO
+#endif
+
 /* Use constructor/destructor attribute */
 /* Value :
 	- NO : Don't use it

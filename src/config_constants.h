@@ -4,7 +4,6 @@
 #define BASIC	1
 #define FIFO	2
 #define ECONOMY 3
-#define PREEMPT 4
 
 #define NO	  0
 #define YES	  1

@@ -70,30 +70,11 @@ int is_initialized = 0;
 
 struct thread main_thread;
 
-#if SCHED == PREEMPT
-	#define CLOCKID CLOCK_REALTIME
-	#define SIG		SIGRTMIN
-
-timer_t timerid;
-struct itimerspec its;
-long long freq_nanosecs;
-sigset_t mask;
-struct sigaction sa;
-struct sigevent sev;
-
-sa.sa_flags = SA_SIGINFO;
-sa.sa_sigaction = handler;
-sigemptyset(&sa.sa_mask);
-if (sigaction(SIG, &sa, NULL) == -1)
-	error("sigaction");
-
-sev.sigev_signo = SIG;
-sev.sigev_value.sival_ptr = &timerid;
-if (timer_create(CLOCKID, &sev, &timerid) == -1)
-	error("timer_create");
-printf("timer ID is %#jx\n", (uintmax_t)timerid);
-
-timer_create(CLOCKID, NULL, NULL);
+#if PREEMPT == YES
+void handler()
+{
+	thread_yield();
+}
 #endif
 
 static void DESTRUCTOR release_main_thread()
@@ -148,7 +129,41 @@ static int CONSTRUCTOR init_main_thread_if_needed()
 #ifndef __GNUC__
 		atexit(release_main_thread);
 #endif
+
+#if PREEMPT == YES
+	#define CLOCKID CLOCK_REALTIME
+	#define SIG		SIGUSR1
+
+		timer_t timerid;
+		struct itimerspec its;
+		long long freq_nanosecs;
+		struct sigaction sa;
+		struct sigevent sev;
+
+		sa.sa_flags = SA_SIGINFO;
+		sa.sa_sigaction = handler;
+		sigemptyset(&sa.sa_mask);
+		if (sigaction(SIG, &sa, NULL) == -1)
+			error("sigaction");
+
+		sev.sigev_signo = SIG;
+		sev.sigev_value.sival_ptr = &timerid;
+		sev.sigev_notify = SIGEV_SIGNAL;
+		if (timer_create(CLOCKID, &sev, &timerid) == -1)
+			error("timer_create");
+
+		freq_nanosecs = 100000000;
+		its.it_value.tv_sec = freq_nanosecs / 1000000000;
+		its.it_value.tv_nsec = freq_nanosecs % 1000000000;
+		its.it_interval.tv_sec = its.it_value.tv_sec;
+		its.it_interval.tv_nsec = its.it_value.tv_nsec;
+
+		if (timer_settime(timerid, 0, &its, NULL) == -1)
+			error("timer_settime");
+
+#endif
 	}
+
 	return 0;
 }
 
@@ -300,7 +315,8 @@ void thread_exit(void* retval)
 #if SCHED == BASIC || SCHED == ECONOMY
 	last_element = queue__has_one_element(&queue);
 	#if SCHED == ECONOMY
-	if (thread->joiner) {thread_yield();
+	if (thread->joiner) {
+		thread_yield();
 		thread->joiner->joining = 0;
 	}
 	#endif
@@ -367,27 +383,31 @@ void thread_exit(void* retval)
 }
 
 /* Mutex */
-int thread_mutex_init(thread_mutex_t *mutex) {
+int thread_mutex_init(thread_mutex_t* mutex)
+{
 	mutex = malloc(sizeof(*mutex));
 	mutex->dummy = 0; // default value for mutex
 	return 0;
 }
 
-int thread_mutex_destroy(thread_mutex_t *mutex) {
+int thread_mutex_destroy(thread_mutex_t* mutex)
+{
 	mutex->dummy = -1; // invalid value for mutex
 	return 0;
 }
 
-int thread_mutex_lock(thread_mutex_t *mutex) {
+int thread_mutex_lock(thread_mutex_t* mutex)
+{
 	// thread_t self = thread_self();
-	while(mutex->dummy) {
+	while (mutex->dummy) {
 		thread_yield();
 	} // wait if mutex is locked
-	mutex->dummy = 1; //lock mutex
+	mutex->dummy = 1; // lock mutex
 	return 0;
 }
 
-int thread_mutex_unlock(thread_mutex_t *mutex) {
+int thread_mutex_unlock(thread_mutex_t* mutex)
+{
 	mutex->dummy = 0; // unlock mutex
 	return 0;
 }
