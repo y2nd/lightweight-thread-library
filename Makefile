@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -Wall -Ofast -march=native -flto -Wextra -Wpedantic -Wno-clobbered
+CFLAGS := -Ofast -march=native -flto -Wno-clobbered
 VALGRIND_OPTIONS := --leak-check=full --show-reachable=yes --track-origins=yes -s
 
 LIB_PATH:=install/lib
