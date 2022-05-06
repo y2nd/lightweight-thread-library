@@ -41,7 +41,8 @@ void write_plot(const char* filename, unsigned int nb, unsigned int nb_exp, char
 				dup2(fd, STDOUT_FILENO);
 				// dup2(fd, STDERR_FILENO);
 				execvp(argv[0], argv);
-				printf("Zone normalement non atteinte\n");
+				perror("execvp");
+				exit(-1);
 				return;
 			}
 			while ((caught = wait3(&status, 0, &rusage)))
