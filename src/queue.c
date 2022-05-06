@@ -52,9 +52,16 @@ int queue__add(struct queue* queue, void* x)
 	#endif
 		queue->last_pool->next = malloc(sizeof(struct queue_pool) + queue->last_pool_size * sizeof(struct node));
 		if (!queue->last_pool->next) {
+			while (queue->last_pool_size > 0) {
+				queue->last_pool_size /= 2;
+				queue->last_pool->next = malloc(sizeof(struct queue_pool) + queue->last_pool_size * sizeof(struct node));
+				if (queue->last_pool->next)
+					goto size_ok_queue;
+			}
 			printf("queue__add erreur malloc\n");
 			return -1;
 		}
+	size_ok_queue:
 		queue->last_pool = queue->last_pool->next;
 		queue->last_pool->next = NULL;
 		queue->free_space = queue->last_pool_size - 1;

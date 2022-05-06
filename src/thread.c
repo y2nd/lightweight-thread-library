@@ -36,6 +36,8 @@ void error(const char* prefix)
 		fprintf(stderr, "%s\n", prefix);
 }
 
+#define STACK_SIZE 64 * 1024
+
 struct thread {
 	ucontext_t uc;
 	int valgrind_stackid;
@@ -47,7 +49,7 @@ struct thread {
 #if SCHED == ECONOMY
 	int joining;
 #endif
-	const char stack[64 * 1024];
+	const char stack[STACK_SIZE];
 };
 
 #if T_MEM_POOL
@@ -202,9 +204,16 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 	#endif
 		threads.last_pool->next = malloc(sizeof(struct thread_pool) + threads.last_pool_size * sizeof(struct thread));
 		if (!threads.last_pool->next) {
+			while (threads.last_pool_size > 0) {
+				threads.last_pool_size /= 2;
+				threads.last_pool->next = malloc(sizeof(struct thread_pool) + threads.last_pool_size * sizeof(struct thread));
+				if (threads.last_pool->next)
+					goto size_ok_thread;
+			}
 			printf("thread_create erreur malloc\n");
 			return -1;
 		}
+	size_ok_thread:
 		threads.last_pool = threads.last_pool->next;
 		threads.last_pool->next = NULL;
 		threads.free_space = threads.last_pool_size - 1;
@@ -223,7 +232,7 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 		error("thread_create getcontext");
 		return -1;
 	}
-	thread->uc.uc_stack.ss_size = 64 * 1024;
+	thread->uc.uc_stack.ss_size = STACK_SIZE;
 	thread->uc.uc_stack.ss_sp = (void*)thread->stack;
 	if (!thread->uc.uc_stack.ss_sp) {
 		error("thread_create malloc is null");
@@ -263,7 +272,7 @@ int thread_yield(void)
 		thread_next = (struct thread*)queue__top(&queue);
 	}
 #endif
-	if (swapcontext(&(thread_before->uc), &thread_next->uc) != 0) {
+	if (thread_before != thread_next && swapcontext(&(thread_before->uc), &thread_next->uc) != 0) {
 		error("thread_yield swapcontext");
 		return -1;
 	}
