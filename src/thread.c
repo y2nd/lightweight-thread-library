@@ -224,11 +224,12 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 	thread->valgrind_stackid = VALGRIND_STACK_REGISTER(thread->uc.uc_stack.ss_sp, thread->uc.uc_stack.ss_sp + thread->uc.uc_stack.ss_size);
 	thread->finished = 0;
 
+	*newthread = thread;
+
 	makecontext(&thread->uc, (void (*)(void))launch, 2, func, funcarg);
 
 	queue__add(&queue, thread);
 
-	*newthread = thread;
 	return 0;
 }
 
@@ -300,7 +301,8 @@ void thread_exit(void* retval)
 #if SCHED == BASIC || SCHED == ECONOMY
 	last_element = queue__has_one_element(&queue);
 	#if SCHED == ECONOMY
-	if (thread->joiner) {thread_yield();
+	if (thread->joiner) {
+		thread_yield();
 		thread->joiner->joining = 0;
 	}
 	#endif
@@ -367,27 +369,31 @@ void thread_exit(void* retval)
 }
 
 /* Mutex */
-int thread_mutex_init(thread_mutex_t *mutex) {
+int thread_mutex_init(thread_mutex_t* mutex)
+{
 	mutex = malloc(sizeof(*mutex));
 	mutex->dummy = 0; // default value for mutex
 	return 0;
 }
 
-int thread_mutex_destroy(thread_mutex_t *mutex) {
+int thread_mutex_destroy(thread_mutex_t* mutex)
+{
 	mutex->dummy = -1; // invalid value for mutex
 	return 0;
 }
 
-int thread_mutex_lock(thread_mutex_t *mutex) {
+int thread_mutex_lock(thread_mutex_t* mutex)
+{
 	// thread_t self = thread_self();
-	while(mutex->dummy) {
+	while (mutex->dummy) {
 		thread_yield();
 	} // wait if mutex is locked
-	mutex->dummy = 1; //lock mutex
+	mutex->dummy = 1; // lock mutex
 	return 0;
 }
 
-int thread_mutex_unlock(thread_mutex_t *mutex) {
+int thread_mutex_unlock(thread_mutex_t* mutex)
+{
 	mutex->dummy = 0; // unlock mutex
 	return 0;
 }
