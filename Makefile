@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -Wall -Ofast -march=native -flto -Wextra -Wpedantic
+CFLAGS := -Ofast -march=native -flto -Wno-clobbered
 VALGRIND_OPTIONS := --leak-check=full --show-reachable=yes --track-origins=yes -s
 
 LIB_PATH:=install/lib
@@ -47,12 +47,13 @@ ifdef MAX_OPTI
 endif
 
 ifdef NORMAL_OPTI
-	CFLAGS:= -Wall -O3 -Wextra -Wpedantic
+	CFLAGS:= -Wall -O3 -Wextra -Wpedantic -Wno-clobbered
 	SUFFIX:=$(SUFFIX)-normal_opti
 endif
 
 ifdef DEBUG
-	CFLAGS:= -Wall -Wextra -Wpedantic -Og -ggdb3
+	CFLAGS:= -Wall -Wextra -Wpedantic -Wno-clobbered -Og -ggdb3
+	SUFFIX:=$(SUFFIX)-debug
 endif
 
 BINS:=$(BINS:$(BIN_PATH)/%=$(BIN_PATH)/%$(SUFFIX))

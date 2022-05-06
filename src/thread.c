@@ -239,11 +239,12 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 	thread->valgrind_stackid = VALGRIND_STACK_REGISTER(thread->uc.uc_stack.ss_sp, thread->uc.uc_stack.ss_sp + thread->uc.uc_stack.ss_size);
 	thread->finished = 0;
 
+	*newthread = thread;
+
 	makecontext(&thread->uc, (void (*)(void))launch, 2, func, funcarg);
 
 	queue__add(&queue, thread);
 
-	*newthread = thread;
 	return 0;
 }
 
