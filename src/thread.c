@@ -261,22 +261,23 @@ int thread_yield(void)
 {
 	INIT_QUEUE_IF_NEEDED_RETURN;
 
-	struct thread* thread_before = (struct thread*)queue__top(&queue);
+	if (!queue__has_one_element(&queue)) {
+		struct thread* thread_before = (struct thread*)queue__top(&queue);
 
-	queue__roll(&queue);
-
-	struct thread* thread_next = (struct thread*)queue__top(&queue);
-#if SCHED == ECONOMY
-	while (thread_next->joining != 0) {
 		queue__roll(&queue);
-		thread_next = (struct thread*)queue__top(&queue);
-	}
-#endif
-	if (thread_before != thread_next && swapcontext(&(thread_before->uc), &thread_next->uc) != 0) {
-		error("thread_yield swapcontext");
-		return -1;
-	}
 
+		struct thread* thread_next = (struct thread*)queue__top(&queue);
+#if SCHED == ECONOMY
+		while (thread_next->joining != 0) {
+			queue__roll(&queue);
+			thread_next = (struct thread*)queue__top(&queue);
+		}
+#endif
+		if (swapcontext(&(thread_before->uc), &thread_next->uc) != 0) {
+			error("thread_yield swapcontext");
+			return -1;
+		}
+	}
 	return 0;
 }
 
