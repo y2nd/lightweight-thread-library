@@ -10,6 +10,9 @@
 #include <valgrind/valgrind.h>
 #include <errno.h>
 #include <stdint.h>
+#include <time.h>
+#include <signal.h>
+#include <unistd.h>
 
 #if defined(__GNUC__) && USE_CTOR
 	#define INIT_QUEUE_IF_NEEDED
@@ -66,6 +69,32 @@ struct queue queue;
 int is_initialized = 0;
 
 struct thread main_thread;
+
+#if SCHED == PREEMPT
+	#define CLOCKID CLOCK_REALTIME
+	#define SIG		SIGRTMIN
+
+timer_t timerid;
+struct itimerspec its;
+long long freq_nanosecs;
+sigset_t mask;
+struct sigaction sa;
+struct sigevent sev;
+
+sa.sa_flags = SA_SIGINFO;
+sa.sa_sigaction = handler;
+sigemptyset(&sa.sa_mask);
+if (sigaction(SIG, &sa, NULL) == -1)
+	error("sigaction");
+
+sev.sigev_signo = SIG;
+sev.sigev_value.sival_ptr = &timerid;
+if (timer_create(CLOCKID, &sev, &timerid) == -1)
+	error("timer_create");
+printf("timer ID is %#jx\n", (uintmax_t)timerid);
+
+timer_create(CLOCKID, NULL, NULL);
+#endif
 
 static void DESTRUCTOR release_main_thread()
 {

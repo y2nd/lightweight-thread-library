@@ -1,7 +1,7 @@
 #ifndef __CONFIG_VERIFS_H__
 #define __CONFIG_VERIFS_H__
 
-#if SCHED != BASIC && SCHED != FIFO && SCHED != ECONOMY
+#if SCHED != BASIC && SCHED != FIFO && SCHED != ECONOMY && SCHED != PREEMPT
 	#error Wrong value for SCHED
 #endif
 
