@@ -118,21 +118,18 @@ function complexity2() {
     gnuplot -e "set terminal pngcairo size 1120,630 enhanced font 'Verdana,10'; set title '$(echo $EXEC | sed 's/_/\\_/g')'; set output '$SCRIPT_DIR/$TITLE.png'; set style line 1 linecolor rgb '#0060ad' linetype 1 linewidth 2; plot '$SCRIPT_DIR/data_plot_$EXEC' using 1:2 with linespoint"
 }
 
-
-SCHED= make
-
 SUFFIXE=p
 SUFFIXE1=
 
-#complexity "${SUFFIXE}21-create-many" "21-create-many$SUFFIXE1" 50 "$(seq 1000 1000 10000)"
-#complexity "${SUFFIXE}22-create-many-recursive" "22-create-many-recursive$SUFFIXE1" 50 "$(seq 1000 1000 10000)"
-#complexity "${SUFFIXE}23-create-many-once" "23-create-many-once$SUFFIXE1" 50 "$(seq 1000 1000 10000)"
-#complexity2 "${SUFFIXE}31-switch-many" "31-switch-many$SUFFIXE1" 100 "10" "$(seq 1000 1000 10000)"
-#complexity "${SUFFIXE}31-switch-many2" "31-switch-many$SUFFIXE1" 100 "$(seq 1000 1000 10000)" "10"
-#complexity2 "${SUFFIXE}32-switch-many-join" "32-switch-many-join$SUFFIXE1" 100 "10" "$(seq 1000 1000 10000)"
-#complexity "${SUFFIXE}32-switch-many-join2" "32-switch-many-join$SUFFIXE1" 100 "$(seq 1000 1000 10000)" "10"
-#complexity2 "${SUFFIXE}33-switch-many-cascade" "33-switch-many-cascade$SUFFIXE1" 100 "10" "$(seq 1000 1000 10000)"
-#complexity "${SUFFIXE}33-switch-many-cascade2" "33-switch-many-cascade$SUFFIXE1" 100 "$(seq 10 30 300)" 10
+complexity "${SUFFIXE}21-create-many" "21-create-many$SUFFIXE1" 50 "$(seq 1000 1000 1000)"
+complexity "${SUFFIXE}22-create-many-recursive" "22-create-many-recursive$SUFFIXE1" 50 "$(seq 1000 1000 1000)"
+complexity "${SUFFIXE}23-create-many-once" "23-create-many-once$SUFFIXE1" 50 "$(seq 1000 1000 1000)"
+complexity2 "${SUFFIXE}31-switch-many" "31-switch-many$SUFFIXE1" 100 "10" "$(seq 1000 1000 1000)"
+complexity "${SUFFIXE}31-switch-many2" "31-switch-many$SUFFIXE1" 100 "$(seq 1000 1000 1000)" "10"
+complexity2 "${SUFFIXE}32-switch-many-join" "32-switch-many-join$SUFFIXE1" 100 "10" "$(seq 1000 1000 1000)"
+complexity "${SUFFIXE}32-switch-many-join2" "32-switch-many-join$SUFFIXE1" 100 "$(seq 1000 1000 1000)" "10"
+complexity2 "${SUFFIXE}33-switch-many-cascade" "33-switch-many-cascade$SUFFIXE1" 100 "10" "$(seq 1000 1000 1000)"
+complexity "${SUFFIXE}33-switch-many-cascade2" "33-switch-many-cascade$SUFFIXE1" 100 "$(seq 10 30 300)" 10
 complexity_fibo "${SUFFIXE}51-fibonacci" "51-fibonacci$SUFFIXE1" 1 25
 
 #SCHED=fifo make
@@ -152,11 +149,11 @@ complexity_fibo "${SUFFIXE}51-fibonacci" "51-fibonacci$SUFFIXE1" 1 25
 #test3 "${SUFFIXE}21-create-many" "21-create-many$SUFFIXE1" "21-create-many$SUFFIXE2" "21-create-many$SUFFIXE3" 1 50 "1000"
 #test3 "${SUFFIXE}22-create-many-recursive" "22-create-many-recursive$SUFFIXE1" "22-create-many-recursive$SUFFIXE2" "22-create-many-recursive$SUFFIXE3" 1 50 "1000"
 #test3 "${SUFFIXE}23-create-many-once" "23-create-many-once$SUFFIXE1" "23-create-many-once$SUFFIXE2" "23-create-many-once$SUFFIXE3" 1 50 "1000"
-#test3 "${SUFFIXE}31-switch-many" "31-switch-many$SUFFIXE1" "31-switch-many$SUFFIXE2" "31-switch-many$SUFFIXE3" 10 100 "10 10000"
-#test3 "${SUFFIXE}31-switch-many2" "31-switch-many$SUFFIXE1" "31-switch-many$SUFFIXE2" "31-switch-many$SUFFIXE3" 10 100 "10000 10"
-#test3 "${SUFFIXE}32-switch-many-join" "32-switch-many-join$SUFFIXE1" "32-switch-many-join$SUFFIXE2" "32-switch-many-join$SUFFIXE3" 10 100 "10 10000"
-#test3 "${SUFFIXE}32-switch-many-join2" "32-switch-many-join$SUFFIXE1" "32-switch-many-join$SUFFIXE2" "32-switch-many-join$SUFFIXE3" 10 100 "10000 10"
-#test3 "${SUFFIXE}33-switch-many-cascade" "33-switch-many-cascade$SUFFIXE1" "33-switch-many-cascade$SUFFIXE2" "33-switch-many-cascade$SUFFIXE3" 10 100 "10 10000"
+#test3 "${SUFFIXE}31-switch-many" "31-switch-many$SUFFIXE1" "31-switch-many$SUFFIXE2" "31-switch-many$SUFFIXE3" 10 100 "10 1000"
+#test3 "${SUFFIXE}31-switch-many2" "31-switch-many$SUFFIXE1" "31-switch-many$SUFFIXE2" "31-switch-many$SUFFIXE3" 10 100 "1000 10"
+#test3 "${SUFFIXE}32-switch-many-join" "32-switch-many-join$SUFFIXE1" "32-switch-many-join$SUFFIXE2" "32-switch-many-join$SUFFIXE3" 10 100 "10 1000"
+#test3 "${SUFFIXE}32-switch-many-join2" "32-switch-many-join$SUFFIXE1" "32-switch-many-join$SUFFIXE2" "32-switch-many-join$SUFFIXE3" 10 100 "1000 10"
+#test3 "${SUFFIXE}33-switch-many-cascade" "33-switch-many-cascade$SUFFIXE1" "33-switch-many-cascade$SUFFIXE2" "33-switch-many-cascade$SUFFIXE3" 10 100 "10 1000"
 #test3 "${SUFFIXE}33-switch-many-cascade2" "33-switch-many-cascade$SUFFIXE1" "33-switch-many-cascade$SUFFIXE2" "33-switch-many-cascade$SUFFIXE3" 10 100 "200 10"
 #test3 "${SUFFIXE}reduction" "reduction$SUFFIXE1" "reduction$SUFFIXE2" "reduction$SUFFIXE3" 10 100
 #
@@ -172,14 +169,14 @@ complexity_fibo "${SUFFIXE}51-fibonacci" "51-fibonacci$SUFFIXE1" 1 25
 #test "${SUFFIXE}03-equity" "03-equity$SUFFIXE1" "03-equity$SUFFIXE2" 10 100
 #test "${SUFFIXE}11-join" "11-join$SUFFIXE1" "11-join$SUFFIXE2" 10 100
 #test "${SUFFIXE}12-join-main" "12-join-main$SUFFIXE1" "12-join-main$SUFFIXE2" 10 100
-#test "${SUFFIXE}21-create-many" "21-create-many$SUFFIXE1" "21-create-many$SUFFIXE2" 1 50 "10000"
-#test "${SUFFIXE}22-create-many-recursive" "22-create-many-recursive$SUFFIXE1" "22-create-many-recursive$SUFFIXE2" 1 50 "10000"
-#test "${SUFFIXE}23-create-many-once" "23-create-many-once$SUFFIXE1" "23-create-many-once$SUFFIXE2" 1 50 "10000"
-#test "${SUFFIXE}31-switch-many" "31-switch-many$SUFFIXE1" "31-switch-many$SUFFIXE2" 10 100 "10 10000"
-#test "${SUFFIXE}31-switch-many2" "31-switch-many$SUFFIXE1" "31-switch-many$SUFFIXE2" 10 100 "10000 10"
-#test "${SUFFIXE}32-switch-many-join" "32-switch-many-join$SUFFIXE1" "32-switch-many-join$SUFFIXE2" 10 100 "10 10000"
-#test "${SUFFIXE}32-switch-many-join2" "32-switch-many-join$SUFFIXE1" "32-switch-many-join$SUFFIXE2" 10 100 "10000 10"
-#test "${SUFFIXE}33-switch-many-cascade" "33-switch-many-cascade$SUFFIXE1" "33-switch-many-cascade$SUFFIXE2" 10 100 "10 10000"
+#test "${SUFFIXE}21-create-many" "21-create-many$SUFFIXE1" "21-create-many$SUFFIXE2" 1 50 "1000"
+#test "${SUFFIXE}22-create-many-recursive" "22-create-many-recursive$SUFFIXE1" "22-create-many-recursive$SUFFIXE2" 1 50 "1000"
+#test "${SUFFIXE}23-create-many-once" "23-create-many-once$SUFFIXE1" "23-create-many-once$SUFFIXE2" 1 50 "1000"
+#test "${SUFFIXE}31-switch-many" "31-switch-many$SUFFIXE1" "31-switch-many$SUFFIXE2" 10 100 "10 1000"
+#test "${SUFFIXE}31-switch-many2" "31-switch-many$SUFFIXE1" "31-switch-many$SUFFIXE2" 10 100 "1000 10"
+#test "${SUFFIXE}32-switch-many-join" "32-switch-many-join$SUFFIXE1" "32-switch-many-join$SUFFIXE2" 10 100 "10 1000"
+#test "${SUFFIXE}32-switch-many-join2" "32-switch-many-join$SUFFIXE1" "32-switch-many-join$SUFFIXE2" 10 100 "1000 10"
+#test "${SUFFIXE}33-switch-many-cascade" "33-switch-many-cascade$SUFFIXE1" "33-switch-many-cascade$SUFFIXE2" 10 100 "10 1000"
 #test "${SUFFIXE}33-switch-many-cascade2" "33-switch-many-cascade$SUFFIXE1" "33-switch-many-cascade$SUFFIXE2" 10 100 "200 10"
 #test "${SUFFIXE}reduction" "reduction$SUFFIXE1" "reduction$SUFFIXE2" 10 100
 #
@@ -187,21 +184,26 @@ complexity_fibo "${SUFFIXE}51-fibonacci" "51-fibonacci$SUFFIXE1" 1 25
 #T_MEM_POOL=yes Q_MEM_POOL=yes SCHED=FIFO make
 #T_MEM_POOL=no Q_MEM_POOL=no SCHED=FIFO make
 #
-#SUFFIXE=c
-#SUFFIXE1=-sched_fifo-t_mem_pool_yes-q_mem_pool_yes
-#SUFFIXE2=-sched_fifo-t_mem_pool_no-q_mem_pool_no
-#
-#test "${SUFFIXE}01-main" "01-main$SUFFIXE1" "01-main$SUFFIXE2" 10 100
-#test "${SUFFIXE}02-switch" "02-switch$SUFFIXE1" "02-switch$SUFFIXE2" 10 100
-#test "${SUFFIXE}03-equity" "03-equity$SUFFIXE1" "03-equity$SUFFIXE2" 10 100
-#test "${SUFFIXE}11-join" "11-join$SUFFIXE1" "11-join$SUFFIXE2" 10 100
-#test "${SUFFIXE}12-join-main" "12-join-main$SUFFIXE1" "12-join-main$SUFFIXE2" 10 100
-#test "${SUFFIXE}21-create-many" "21-create-many$SUFFIXE1" "21-create-many$SUFFIXE2" 1 50 "10000"
-#test "${SUFFIXE}22-create-many-recursive" "22-create-many-recursive$SUFFIXE1" "22-create-many-recursive$SUFFIXE2" 1 50 "10000"
-#test "${SUFFIXE}23-create-many-once" "23-create-many-once$SUFFIXE1" "23-create-many-once$SUFFIXE2" 1 50 "10000"
-#test "${SUFFIXE}31-switch-many" "31-switch-many$SUFFIXE1" "31-switch-many$SUFFIXE2" 10 100 "10 10000"
-#test "${SUFFIXE}31-switch-many2" "31-switch-many$SUFFIXE1" "31-switch-many$SUFFIXE2" 10 100 "10000 10"
-#test "${SUFFIXE}32-switch-many-join" "32-switch-many-join$SUFFIXE1" "32-switch-many-join$SUFFIXE2" 10 100 "10 10000"
-#test "${SUFFIXE}32-switch-many-join2" "32-switch-many-join$SUFFIXE1" "32-switch-many-join$SUFFIXE2" 10 100 "10000 10"
-#test "${SUFFIXE}33-switch-many-cascade" "33-switch-many-cascade$SUFFIXE1" "33-switch-many-cascade$SUFFIXE2" 10 100 "10 10000"
-#test "${SUFFIXE}33-switch-many-cascade2" "33-switch-many-cascade$SUFFIXE1" "33-switch-many-cascade$SUFFIXE2" 10 100 "200 10"
+
+make
+MAX_OPTI=1 make
+NORMAL_OPTI=1 make
+
+SUFFIXE=c
+SUFFIXE1=-normal_opti
+SUFFIXE2=-max_opti
+
+test "${SUFFIXE}01-main" "01-main$SUFFIXE1" "01-main$SUFFIXE2" 10 100
+test "${SUFFIXE}02-switch" "02-switch$SUFFIXE1" "02-switch$SUFFIXE2" 10 100
+test "${SUFFIXE}03-equity" "03-equity$SUFFIXE1" "03-equity$SUFFIXE2" 10 100
+test "${SUFFIXE}11-join" "11-join$SUFFIXE1" "11-join$SUFFIXE2" 10 100
+test "${SUFFIXE}12-join-main" "12-join-main$SUFFIXE1" "12-join-main$SUFFIXE2" 10 100
+test "${SUFFIXE}21-create-many" "21-create-many$SUFFIXE1" "21-create-many$SUFFIXE2" 1 50 "1000"
+test "${SUFFIXE}22-create-many-recursive" "22-create-many-recursive$SUFFIXE1" "22-create-many-recursive$SUFFIXE2" 1 50 "1000"
+test "${SUFFIXE}23-create-many-once" "23-create-many-once$SUFFIXE1" "23-create-many-once$SUFFIXE2" 1 50 "1000"
+test "${SUFFIXE}31-switch-many" "31-switch-many$SUFFIXE1" "31-switch-many$SUFFIXE2" 10 100 "10 1000"
+test "${SUFFIXE}31-switch-many2" "31-switch-many$SUFFIXE1" "31-switch-many$SUFFIXE2" 10 100 "1000 10"
+test "${SUFFIXE}32-switch-many-join" "32-switch-many-join$SUFFIXE1" "32-switch-many-join$SUFFIXE2" 10 100 "10 1000"
+test "${SUFFIXE}32-switch-many-join2" "32-switch-many-join$SUFFIXE1" "32-switch-many-join$SUFFIXE2" 10 100 "1000 10"
+test "${SUFFIXE}33-switch-many-cascade" "33-switch-many-cascade$SUFFIXE1" "33-switch-many-cascade$SUFFIXE2" 10 100 "10 1000"
+test "${SUFFIXE}33-switch-many-cascade2" "33-switch-many-cascade$SUFFIXE1" "33-switch-many-cascade$SUFFIXE2" 10 100 "200 10"
