@@ -44,10 +44,10 @@ struct thread {
 	void* return_value; // Ou next
 	int finished;
 #if SCHED == FIFO || SCHED == ECONOMY
-	struct thread* joiner;
+	struct thread* joiner; // Le thread qui attend notre fin
 #endif
 #if SCHED == ECONOMY
-	int joining;
+	int joining; // Wether the thread is waiting for another to finish
 #endif
 	const char stack[STACK_SIZE];
 };
@@ -292,7 +292,7 @@ int thread_join(thread_t thread, void** retval)
 	#if SCHED == FIFO
 		_thread->joiner = queue__pop(&queue); // Le joiner s'enlève de la file
 		if (swapcontext(&(_thread->joiner->uc), &((struct thread*)queue__top(&queue))->uc) != 0) {
-			error("thread_yield swapcontext");
+			error("thread_join swapcontext");
 			return -1;
 		}
 	#elif SCHED == ECONOMY
@@ -327,7 +327,6 @@ void thread_exit(void* retval)
 	last_element = queue__has_one_element(&queue);
 	#if SCHED == ECONOMY
 	if (thread->joiner) {
-		thread_yield();
 		thread->joiner->joining = 0;
 	}
 	#endif
