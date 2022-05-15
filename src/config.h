@@ -69,7 +69,7 @@
 #endif
 
 /* Number of threads before create directly joins the thread */
-#define THREAD_LIMIT 100000
+#define THREAD_LIMIT 1000
 
 #include "config_verifs.h"
 
