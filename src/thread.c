@@ -393,32 +393,80 @@ void thread_exit(void* retval)
 	}
 }
 
+
+
+#include <assert.h>
+
 /* Mutex */
 int thread_mutex_init(thread_mutex_t* mutex)
 {
-	mutex = malloc(sizeof(*mutex));
 	mutex->dummy = 0; // default value for mutex
+	#if SCHED == FIFO || SCHED == ECONOMY
+		queue__init(&mutex->queue, NULL);
+	#endif	
 	return 0;
 }
 
 int thread_mutex_destroy(thread_mutex_t* mutex)
 {
 	mutex->dummy = -1; // invalid value for mutex
+	#if SCHED == FIFO || SCHED == ECONOMY
+		queue__release(&mutex->queue);
+	#endif
 	return 0;
 }
 
 int thread_mutex_lock(thread_mutex_t* mutex)
 {
-	// thread_t self = thread_self();
-	while (mutex->dummy) {
+#if SCHED == BASIC
+	/* yield until mutex is unlocked */
+	while (mutex->dummy) 
 		thread_yield();
-	} // wait if mutex is locked
-	mutex->dummy = 1; // lock mutex
+#elif SCHED == FIFO || SCHED == ECONOMY
+	/* if mutex is locked */
+	if (mutex->dummy) {
+		struct thread* self = queue__pop(&queue);
+		#if SCHED == ECONOMY
+			self->joining = 1; // TODO: debug infinite loop
+		#endif
+		queue__add(&mutex->queue, self);
+
+		if (swapcontext(&(self->uc), &((struct thread*)queue__top(&queue))->uc) != 0) {
+			error("thread_mutex_lock swapcontext");
+			return -1;
+		}
+	}
+#endif
+	/* lock mutex */
+	mutex->dummy = 1;
 	return 0;
 }
 
 int thread_mutex_unlock(thread_mutex_t* mutex)
 {
-	mutex->dummy = 0; // unlock mutex
+#if SCHED == BASIC
+	/* unlock mutex */
+	mutex->dummy = 0;
 	return 0;
+#elif SCHED == FIFO || SCHED == ECONOMY
+	#if SCHED == ECONOMY
+		struct thread* self = thread_self();
+		self->joining = 0;
+	#endif
+	/* check if queue is e_m_p_t_y  */
+	if (queue__has_one_element(&mutex->queue)) {
+		/* unlock mutex */
+		mutex->dummy = 0;
+	}
+	else {
+		if (queue__top(&mutex->queue) == NULL)
+			queue__roll(&mutex->queue);
+		struct thread* next = queue__pop(&mutex->queue);
+		queue__add(&queue, next);
+		#if SCHED == ECONOMY
+			next->joining = 0;
+		#endif
+	}
+	return 0;
+#endif
 }
