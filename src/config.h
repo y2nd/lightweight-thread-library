@@ -19,8 +19,8 @@
 
 /* Use Preemption */
 /*
-	-NO : Don't use it
-	-YES : use it
+	- NO : Don't use it
+	- YES : use it
 */
 #ifndef PREEMPT
 	#define PREEMPT NO
@@ -67,6 +67,9 @@
 #ifndef T_MEM_POOL_FS
 	#define T_MEM_POOL_FS 10
 #endif
+
+/* Number of threads before create directly joins the thread */
+#define THREAD_LIMIT 1000
 
 #include "config_verifs.h"
 

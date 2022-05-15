@@ -17,8 +17,18 @@ define \n
 endef
 
 # Gestion des options
-OPTIONS:=SCHED USE_CTOR Q_LOOP Q_MEM_POOL Q_MEM_POOL_G T_MEM_POOL T_MEM_POOL_G
+OPTIONS:=SCHED USE_CTOR Q_LOOP Q_MEM_POOL Q_MEM_POOL_G T_MEM_POOL T_MEM_POOL_G PREEMPT THREAD_LIMIT
 SUFFIX:=
+
+ifdef NORMAL_OPTI
+	CFLAGS:= -Wall -O3 -Wextra -Wpedantic -Wno-clobbered
+	SUFFIX:=$(SUFFIX)-normal_opti
+endif
+
+ifdef DEBUG
+	CFLAGS:= -Wall -Wextra -Wpedantic -Wno-clobbered -Og -ggdb3
+	SUFFIX:=$(SUFFIX)-debug
+endif
 
 $(eval $(foreach OPTION,$(OPTIONS),ifdef $(OPTION)${\n}\
 	SUFFIX:=-$(shell echo $(OPTION)_$($(OPTION)) | tr A-Z a-z)$$(SUFFIX)${\n}\
@@ -44,16 +54,6 @@ endif
 ifdef MAX_OPTI
 	SUFFIX:=$(SUFFIX)-max_opti
 	LIBRARY_OPTIONS:=src/thread.c src/queue.c
-endif
-
-ifdef NORMAL_OPTI
-	CFLAGS:= -Wall -O3 -Wextra -Wpedantic -Wno-clobbered
-	SUFFIX:=$(SUFFIX)-normal_opti
-endif
-
-ifdef DEBUG
-	CFLAGS:= -Wall -Wextra -Wpedantic -Wno-clobbered -Og -ggdb3
-	SUFFIX:=$(SUFFIX)-debug
 endif
 
 BINS:=$(BINS:$(BIN_PATH)/%=$(BIN_PATH)/%$(SUFFIX))

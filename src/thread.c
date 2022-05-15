@@ -44,10 +44,10 @@ struct thread {
 	void* return_value; // Ou next
 	int finished;
 #if SCHED == FIFO || SCHED == ECONOMY
-	struct thread* joiner;
+	struct thread* joiner; // Le thread qui attend notre fin
 #endif
 #if SCHED == ECONOMY
-	int joining;
+	int joining; // Wether the thread is waiting for another to finish
 #endif
 	const char stack[STACK_SIZE];
 };
@@ -68,6 +68,7 @@ struct threads threads;
 #endif
 
 struct queue queue;
+int nb_threads = 1;
 int is_initialized = 0;
 
 struct thread main_thread;
@@ -180,9 +181,13 @@ void launch(void* (*func)(void*), void* arg)
 	thread_exit(func(arg));
 }
 
+static int thread_semi_join(struct thread* _thread);
+
 int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 {
 	INIT_QUEUE_IF_NEEDED_RETURN;
+
+	nb_threads++;
 
 	// TODO : Ajouter le thread en 2 position, il va très rapidement servir
 
@@ -254,6 +259,12 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 
 	queue__add(&queue, thread);
 
+	if (nb_threads > THREAD_LIMIT) {
+		int code;
+		if ((code = thread_semi_join(thread)))
+			return code;
+	}
+
 	return 0;
 }
 
@@ -281,9 +292,9 @@ int thread_yield(void)
 	return 0;
 }
 
-int thread_join(thread_t thread, void** retval)
+/* Waits for end but does not take return value */
+static int thread_semi_join(struct thread* _thread)
 {
-	struct thread* _thread = (struct thread*)thread;
 #if SCHED == BASIC
 	while (_thread->finished != 1)
 		thread_yield();
@@ -292,7 +303,7 @@ int thread_join(thread_t thread, void** retval)
 	#if SCHED == FIFO
 		_thread->joiner = queue__pop(&queue); // Le joiner s'enlève de la file
 		if (swapcontext(&(_thread->joiner->uc), &((struct thread*)queue__top(&queue))->uc) != 0) {
-			error("thread_yield swapcontext");
+			error("thread_join swapcontext");
 			return -1;
 		}
 	#elif SCHED == ECONOMY
@@ -303,6 +314,17 @@ int thread_join(thread_t thread, void** retval)
 	#endif
 	}
 #endif
+	return 0;
+}
+
+int thread_join(thread_t thread, void** retval)
+{
+	struct thread* _thread = (struct thread*)thread;
+	int code;
+	if ((code = thread_semi_join(_thread)))
+		return code;
+
+	nb_threads--;
 
 	if (retval)
 		*retval = _thread->return_value;
@@ -327,7 +349,6 @@ void thread_exit(void* retval)
 	last_element = queue__has_one_element(&queue);
 	#if SCHED == ECONOMY
 	if (thread->joiner) {
-		thread_yield();
 		thread->joiner->joining = 0;
 	}
 	#endif
