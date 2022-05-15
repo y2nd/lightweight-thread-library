@@ -3,6 +3,8 @@
 
 #ifndef USE_PTHREAD
 
+	#include "queue.h"
+
 /* identifiant de thread
  * NB: pourra être un entier au lieu d'un pointeur si ca vous arrange,
  *     mais attention aux inconvénient des tableaux de threads
