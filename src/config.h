@@ -25,6 +25,12 @@
 #ifndef PREEMPT
 	#define PREEMPT NO
 #endif
+#ifndef CLOCKID // TODO : Mettre en place les verif
+	#define CLOCKID CLOCK_MONOTONIC
+#endif
+#ifndef SIG
+	#define SIG SIGUSR1
+#endif
 
 /* Use constructor/destructor attribute */
 /* Value :

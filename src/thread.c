@@ -3,6 +3,7 @@
 #include "config.h"
 
 #include "queue.h"
+#include <bits/types/sigset_t.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ucontext.h>
@@ -73,15 +74,58 @@ int is_initialized = 0;
 
 struct thread main_thread;
 
-#if PREEMPT == YES
-void handler()
+static int force_thread_yield();
+
+#if PREEMPT
+
+timer_t timerid;
+
+static int force_thread_yield_impl();
+
+void handler(int i)
 {
-	thread_yield();
+	(void)i;
+	printf("Handler called\n");
+	force_thread_yield_impl();
 }
+
+sigset_t sigset;
+
+void set_time()
+{
+	struct itimerspec its;
+	long long freq_nanosecs;
+
+	freq_nanosecs = 100000000; // 100 ms
+	its.it_value.tv_sec = freq_nanosecs / 1000000000;
+	its.it_value.tv_nsec = freq_nanosecs % 1000000000;
+	its.it_interval.tv_sec = 0;
+	its.it_interval.tv_nsec = 0;
+
+	if (timer_settime(timerid, 0, &its, NULL) == -1)
+		error("timer_settime");
+}
+
+void block_preempt()
+{
+	if (sigprocmask(SIG_BLOCK, &sigset, NULL) != 0)
+		error("sigprocmask block");
+}
+
+void unblock_preempt()
+{
+	if (sigprocmask(SIG_UNBLOCK, &sigset, NULL) != 0)
+		error("sigprocmask blunblockock");
+}
+
 #endif
 
 static void DESTRUCTOR release_main_thread()
 {
+#if PREEMPT
+	timer_delete(&timerid);
+#endif
+
 	queue__release(&queue);
 #if T_MEM_POOL
 	struct thread_pool* pool = threads.first_pool;
@@ -133,37 +177,25 @@ static int CONSTRUCTOR init_main_thread_if_needed()
 		atexit(release_main_thread);
 #endif
 
-#if PREEMPT == YES
-	#define CLOCKID CLOCK_REALTIME
-	#define SIG		SIGUSR1
+#if PREEMPT
+		sigemptyset(&sigset);
+		sigaddset(&sigset, SIG);
 
-		timer_t timerid;
-		struct itimerspec its;
-		long long freq_nanosecs;
 		struct sigaction sa;
-		struct sigevent sev;
-
-		sa.sa_flags = SA_SIGINFO;
-		sa.sa_sigaction = handler;
+		sa.sa_flags = 0;
+		sa.sa_handler = handler;
 		sigemptyset(&sa.sa_mask);
 		if (sigaction(SIG, &sa, NULL) == -1)
 			error("sigaction");
 
+		struct sigevent sev;
 		sev.sigev_signo = SIG;
 		sev.sigev_value.sival_ptr = &timerid;
 		sev.sigev_notify = SIGEV_SIGNAL;
 		if (timer_create(CLOCKID, &sev, &timerid) == -1)
 			error("timer_create");
 
-		freq_nanosecs = 100000000;
-		its.it_value.tv_sec = freq_nanosecs / 1000000000;
-		its.it_value.tv_nsec = freq_nanosecs % 1000000000;
-		its.it_interval.tv_sec = its.it_value.tv_sec;
-		its.it_interval.tv_nsec = its.it_value.tv_nsec;
-
-		if (timer_settime(timerid, 0, &its, NULL) == -1)
-			error("timer_settime");
-
+		set_time();
 #endif
 	}
 
@@ -186,6 +218,10 @@ static int thread_semi_join(struct thread* _thread);
 int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 {
 	INIT_QUEUE_IF_NEEDED_RETURN;
+
+#if PREEMPT
+	block_preempt();
+#endif
 
 	nb_threads++;
 
@@ -259,6 +295,10 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 
 	queue__add(&queue, thread);
 
+#if PREEMPT
+	unblock_preempt();
+#endif
+
 	if (nb_threads > THREAD_LIMIT) {
 		int code;
 		if ((code = thread_semi_join(thread)))
@@ -269,6 +309,11 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 }
 
 int thread_yield(void)
+{
+	return force_thread_yield();
+}
+
+static int force_thread_yield_impl(void)
 {
 	INIT_QUEUE_IF_NEEDED_RETURN;
 
@@ -285,19 +330,41 @@ int thread_yield(void)
 		}
 #endif
 		if (swapcontext(&(thread_before->uc), &thread_next->uc) != 0) {
-			error("thread_yield swapcontext");
+			error("force_thread_yield swapcontext");
 			return -1;
 		}
+#if PREEMPT
+		set_time();
+#endif
 	}
 	return 0;
+}
+
+static int force_thread_yield(void)
+{
+#if PREEMPT
+	block_preempt();
+#endif
+
+	int code = force_thread_yield_impl();
+
+#if PREEMPT
+	unblock_preempt();
+#endif
+
+	return code;
 }
 
 /* Waits for end but does not take return value */
 static int thread_semi_join(struct thread* _thread)
 {
+#if PREEMPT
+	block_preempt();
+#endif
+
 #if SCHED == BASIC
 	while (_thread->finished != 1)
-		thread_yield();
+		force_thread_yield();
 #elif SCHED == FIFO || SCHED == ECONOMY
 	if (_thread->finished != 1) {
 	#if SCHED == FIFO
@@ -306,14 +373,22 @@ static int thread_semi_join(struct thread* _thread)
 			error("thread_join swapcontext");
 			return -1;
 		}
+		#if PREEMPT
+		set_time();
+		#endif
 	#elif SCHED == ECONOMY
 		_thread->joiner = queue__top(&queue);
 		struct thread* self = thread_self();
 		self->joining = 1;
-		thread_yield();
+		force_thread_yield();
 	#endif
 	}
 #endif
+
+#if PREEMPT
+	unblock_preempt();
+#endif
+
 	return 0;
 }
 
@@ -341,6 +416,10 @@ int thread_join(thread_t thread, void** retval)
 
 void thread_exit(void* retval)
 {
+#if PREEMPT
+	block_preempt();
+#endif
+
 	struct thread* thread = queue__top(&queue);
 
 	int last_element;
@@ -386,7 +465,7 @@ void thread_exit(void* retval)
 #endif
 
 			if (swapcontext(&main_thread.uc, &thread_next->uc) != 0) {
-				error("thread_exit set_context");
+				error("thread_exit swapcontext");
 			}
 			// Pas besoin de laisser la pool de thread avec un bon first_empty
 #if !T_MEM_POOL
@@ -412,9 +491,9 @@ void thread_exit(void* retval)
 			exit(-1);
 		}
 	}
+
+	exit(-1);
 }
-
-
 
 #include <assert.h>
 
@@ -422,18 +501,18 @@ void thread_exit(void* retval)
 int thread_mutex_init(thread_mutex_t* mutex)
 {
 	mutex->dummy = 0; // default value for mutex
-	#if SCHED == FIFO || SCHED == ECONOMY
-		queue__init(&mutex->queue, NULL);
-	#endif	
+#if SCHED == FIFO || SCHED == ECONOMY
+	queue__init(&mutex->queue, NULL);
+#endif
 	return 0;
 }
 
 int thread_mutex_destroy(thread_mutex_t* mutex)
 {
 	mutex->dummy = -1; // invalid value for mutex
-	#if SCHED == FIFO || SCHED == ECONOMY
-		queue__release(&mutex->queue);
-	#endif
+#if SCHED == FIFO || SCHED == ECONOMY
+	queue__release(&mutex->queue);
+#endif
 	return 0;
 }
 
@@ -441,15 +520,15 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 {
 #if SCHED == BASIC
 	/* yield until mutex is unlocked */
-	while (mutex->dummy) 
+	while (mutex->dummy)
 		thread_yield();
 #elif SCHED == FIFO || SCHED == ECONOMY
 	/* if mutex is locked */
 	if (mutex->dummy) {
 		struct thread* self = queue__pop(&queue);
-		#if SCHED == ECONOMY
-			self->joining = 1; // TODO: debug infinite loop
-		#endif
+	#if SCHED == ECONOMY
+		self->joining = 1; // TODO: debug infinite loop
+	#endif
 		queue__add(&mutex->queue, self);
 
 		if (swapcontext(&(self->uc), &((struct thread*)queue__top(&queue))->uc) != 0) {
@@ -471,22 +550,21 @@ int thread_mutex_unlock(thread_mutex_t* mutex)
 	return 0;
 #elif SCHED == FIFO || SCHED == ECONOMY
 	#if SCHED == ECONOMY
-		struct thread* self = thread_self();
-		self->joining = 0;
+	struct thread* self = thread_self();
+	self->joining = 0;
 	#endif
 	/* check if queue is e_m_p_t_y  */
 	if (queue__has_one_element(&mutex->queue)) {
 		/* unlock mutex */
 		mutex->dummy = 0;
-	}
-	else {
+	} else {
 		if (queue__top(&mutex->queue) == NULL)
 			queue__roll(&mutex->queue);
 		struct thread* next = queue__pop(&mutex->queue);
 		queue__add(&queue, next);
-		#if SCHED == ECONOMY
-			next->joining = 0;
-		#endif
+	#if SCHED == ECONOMY
+		next->joining = 0;
+	#endif
 	}
 	return 0;
 #endif
