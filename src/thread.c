@@ -518,6 +518,9 @@ int thread_mutex_destroy(thread_mutex_t* mutex)
 
 int thread_mutex_lock(thread_mutex_t* mutex)
 {
+#if PREEMPT
+	block_preempt();
+#endif
 #if SCHED == BASIC
 	/* yield until mutex is unlocked */
 	while (mutex->dummy)
@@ -534,11 +537,18 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 		if (swapcontext(&(self->uc), &((struct thread*)queue__top(&queue))->uc) != 0) {
 			error("thread_mutex_lock swapcontext");
 			return -1;
-		}		
+		}
+	#if PREEMPT
+		set_time();
+	#endif
 	}
+
 #endif
 	/* lock mutex */
 	mutex->dummy = 1;
+#if PREEMPT
+	unblock_preempt();
+#endif
 	return 0;
 }
 
@@ -549,6 +559,9 @@ int thread_mutex_unlock(thread_mutex_t* mutex)
 	mutex->dummy = 0;
 	return 0;
 #elif SCHED == FIFO || SCHED == ECONOMY
+	#if PREEMPT
+	block_preempt();
+	#endif
 	/* check if queue is e_m_p_t_y  */
 	if (queue__has_one_element(&mutex->queue)) {
 		/* unlock mutex */
@@ -562,6 +575,9 @@ int thread_mutex_unlock(thread_mutex_t* mutex)
 		next->joining = 0;
 	#endif
 	}
+	#if PREEMPT
+	unblock_preempt();
+	#endif
 	return 0;
 #endif
 }
