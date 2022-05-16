@@ -77,16 +77,34 @@ struct thread main_thread;
 static int force_thread_yield();
 
 #if PREEMPT
+// TODO PREEMPT (rapport)-> faire des tests de perf avec une variable globale à la place de sigprocmask pour block et unblock
+// (devrait générer un problème où il faut unblock dès qu'on arrive sur le thread)
+// + tests perfs avec timer en 1 ms et 100 ms (facteur de temps ?)
+// + comparaison interval/reset
 
 timer_t timerid;
+int has_yielded = 0;
 
 static int force_thread_yield_impl();
 
 void handler(int i)
 {
+	#if TIMER_INTERVAL
+	if (has_yielded) {
+		has_yielded = 0;
+		return;
+	} else {
+		has_yielded = 1;
+		(void)i;
+		printf("Handler called\n");
+		force_thread_yield_impl();
+	}
+	#endif
+	#if !TIMER_INTERVAL
 	(void)i;
 	printf("Handler called\n");
 	force_thread_yield_impl();
+	#endif
 }
 
 sigset_t sigset;
@@ -99,8 +117,16 @@ void set_time()
 	freq_nanosecs = 100000000; // 100 ms
 	its.it_value.tv_sec = freq_nanosecs / 1000000000;
 	its.it_value.tv_nsec = freq_nanosecs % 1000000000;
+	#if TIMER_INTERVAL
+	// preemt if no thread has yield on the given interval, else no yield on next end of interval
+	its.it_interval.tv_sec = its.it_value.tv_sec;
+	its.it_interval.tv_nsec = its.it_value.tv_nsec;
+	#endif
+	#if !TIMER_INTERVAL
+	// default (if no interval) is reset timer for every thread
 	its.it_interval.tv_sec = 0;
 	its.it_interval.tv_nsec = 0;
+	#endif
 
 	if (timer_settime(timerid, 0, &its, NULL) == -1)
 		error("timer_settime");
