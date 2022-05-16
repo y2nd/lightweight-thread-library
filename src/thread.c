@@ -94,7 +94,6 @@ void handler(int i)
 		has_yielded = 0;
 		return;
 	} else {
-		has_yielded = 1;
 		(void)i;
 		printf("Handler called\n");
 		force_thread_yield_impl();
@@ -118,7 +117,7 @@ void set_time()
 	its.it_value.tv_sec = freq_nanosecs / 1000000000;
 	its.it_value.tv_nsec = freq_nanosecs % 1000000000;
 	#if TIMER_INTERVAL
-	// preemt if no thread has yield on the given interval, else no yield on next end of interval
+	// preemt if no thread has yielded on the given interval, else no yield on next end of interval
 	its.it_interval.tv_sec = its.it_value.tv_sec;
 	its.it_interval.tv_nsec = its.it_value.tv_nsec;
 	#endif
@@ -366,6 +365,9 @@ static int force_thread_yield(void)
 {
 #if PREEMPT
 	block_preempt();
+	#if TIMER_INTERVAL
+	has_yielded = 1;
+	#endif
 #endif
 
 	int code = force_thread_yield_impl();
