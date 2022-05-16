@@ -23,9 +23,12 @@
 	- YES : use it
 */
 #ifndef PREEMPT
-	#define PREEMPT NO
+	#define PREEMPT YES
 #endif
-#ifndef CLOCKID // TODO : Mettre en place les verif
+#ifndef TIMER_INTERVAL
+	#define TIMER_INTERVAL YES
+#endif
+#ifndef CLOCKID
 	#define CLOCKID CLOCK_MONOTONIC
 #endif
 #ifndef SIG
