@@ -23,7 +23,7 @@
 	- YES : use it
 */
 #ifndef PREEMPT
-	#define PREEMPT NO
+	#define PREEMPT YES
 #endif
 #ifndef TIMER_INTERVAL
 	#define TIMER_INTERVAL YES

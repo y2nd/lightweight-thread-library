@@ -355,7 +355,7 @@ static int force_thread_yield_impl(void)
 			error("force_thread_yield swapcontext");
 			return -1;
 		}
-#if PREEMPT
+#if PREEMPT && !TIMER_INTERVAL
 		set_time();
 #endif
 	}
@@ -395,7 +395,7 @@ static int thread_semi_join(struct thread* _thread)
 			error("thread_join swapcontext");
 			return -1;
 		}
-		#if PREEMPT
+		#if PREEMPT && !TIMER_INTERVAL
 		set_time();
 		#endif
 	#elif SCHED == ECONOMY
@@ -556,7 +556,7 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 		if (swapcontext(&(self->uc), &((struct thread*)queue__top(&queue))->uc) != 0) {
 			error("thread_mutex_lock swapcontext");
 			return -1;
-		}		
+		}
 	}
 #endif
 	/* lock mutex */

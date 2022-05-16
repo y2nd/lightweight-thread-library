@@ -98,7 +98,7 @@ check: test
 	LD_LIBRARY_PATH=install/lib install/bin/51-fibonacci$(SUFFIX) 20
 	LD_LIBRARY_PATH=install/lib install/bin/61-mutex$(SUFFIX) 20
 	LD_LIBRARY_PATH=install/lib install/bin/62-mutex$(SUFFIX) 20
-	LD_LIBRARY_PATH=install/lib install/bin/71-preemption$(SUFFIX) 100
+	LD_LIBRARY_PATH=install/lib install/bin/71-preemption$(SUFFIX) 20
 	LD_LIBRARY_PATH=install/lib install/bin/77-merge-sort$(SUFFIX)
 
 valgrind: $(BINS)
