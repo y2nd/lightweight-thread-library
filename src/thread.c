@@ -148,10 +148,6 @@ void unblock_preempt()
 
 static void DESTRUCTOR release_main_thread()
 {
-#if PREEMPT
-	timer_delete(&timerid);
-#endif
-
 	queue__release(&queue);
 #if T_MEM_POOL
 	struct thread_pool* pool = threads.first_pool;
