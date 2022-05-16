@@ -30,6 +30,10 @@ ifdef DEBUG
 	SUFFIX:=$(SUFFIX)-debug
 endif
 
+ifdef PREEMPT
+	CFLAGS:=$(CFLAGS) -lrt
+endif
+
 $(eval $(foreach OPTION,$(OPTIONS),ifdef $(OPTION)${\n}\
 	SUFFIX:=-$(shell echo $(OPTION)_$($(OPTION)) | tr A-Z a-z)$$(SUFFIX)${\n}\
 	CFLAGS:=-D$(OPTION)=$(shell echo $($(OPTION)) | tr a-z A-Z) $$(CFLAGS)${\n}\
@@ -63,22 +67,22 @@ DYNAMIC_LIBRARY:=$(LIB_PATH)/libthread$(SUFFIX).so
 all: install test
 
 $(STATIC_LIBRARY): src/thread.c src/queue.c
-	$(CC) $(CFLAGS) -c src/thread.c -o thread.o -Isrc
-	$(CC) $(CFLAGS) -c src/queue.c  -o queue.o -Isrc
+	$(CC) -c src/thread.c -o thread.o -Isrc $(CFLAGS)
+	$(CC) -c src/queue.c  -o queue.o -Isrc $(CFLAGS)
 	ar rc $@ thread.o queue.o
 
 $(DYNAMIC_LIBRARY): src/thread.c src/queue.c
-	$(CC) $(CFLAGS) -c -fPIC src/thread.c -o thread.o -Isrc
-	$(CC) $(CFLAGS) -c -fPIC src/queue.c  -o queue.o -Isrc
-	$(CC) $(CFLAGS) thread.o queue.o -shared -o $(DYNAMIC_LIBRARY)
+	$(CC) -c -fPIC src/thread.c -o thread.o -Isrc $(CFLAGS)
+	$(CC) -c -fPIC src/queue.c  -o queue.o -Isrc $(CFLAGS)
+	$(CC) thread.o queue.o -shared -o $(DYNAMIC_LIBRARY) $(CFLAGS)
 
 install: $(BINS) $(BINS_PTHREAD)
 
 $(BIN_PATH)/%$(SUFFIX): tst/%.c $(THREAD_LIBRARY)
 #	$(CC) $(CFLAGS) -Isrc -o $@ -L$(LIB_PATH) $< -lthread  
-	$(CC) $(CFLAGS) -Isrc -o $@ $< $(LIBRARY_OPTIONS)
+	$(CC) -Isrc -o $@ $< $(LIBRARY_OPTIONS) $(CFLAGS) 
 $(BIN_PATH)/%-pthread: tst/%.c
-	$(CC) $(CFLAGS) -Isrc -DUSE_PTHREAD $< -o $@ -lpthread
+	$(CC) -Isrc -DUSE_PTHREAD $< -o $@ -lpthread $(CFLAGS) 
 
 test: $(BINS)
 	
