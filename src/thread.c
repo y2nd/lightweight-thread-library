@@ -560,7 +560,7 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 			error("thread_mutex_lock swapcontext");
 			return -1;
 		}
-	#if PREEMPT
+	#if PREEMPT && !TIMER_INTERVAL
 		set_time();
 	#endif
 	}
