@@ -556,7 +556,7 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 		if (swapcontext(&(self->uc), &((struct thread*)queue__top(&queue))->uc) != 0) {
 			error("thread_mutex_lock swapcontext");
 			return -1;
-		}
+		}		
 	}
 #endif
 	/* lock mutex */
@@ -571,10 +571,6 @@ int thread_mutex_unlock(thread_mutex_t* mutex)
 	mutex->dummy = 0;
 	return 0;
 #elif SCHED == FIFO || SCHED == ECONOMY
-	#if SCHED == ECONOMY
-	struct thread* self = thread_self();
-	self->joining = 0;
-	#endif
 	/* check if queue is e_m_p_t_y  */
 	if (queue__has_one_element(&mutex->queue)) {
 		/* unlock mutex */
