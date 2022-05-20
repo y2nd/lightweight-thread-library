@@ -44,8 +44,10 @@ struct thread {
 	int valgrind_stackid;
 	void* return_value; // Ou next
 	int finished;
-#if SCHED == FIFO || SCHED == ECONOMY
+#if SCHED == FIFO || SCHED == ECONOMY || SCHED == BASIC
 	struct thread* joiner; // Le thread qui attend notre fin
+	struct thread* last_join;
+
 #endif
 #if SCHED == ECONOMY
 	int joining; // Wether the thread is waiting for another to finish
@@ -309,7 +311,7 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 	thread->uc.uc_link = NULL; // WARN : (sizeof(ucontext_t));
 	thread->valgrind_stackid = VALGRIND_STACK_REGISTER(thread->uc.uc_stack.ss_sp, thread->uc.uc_stack.ss_sp + thread->uc.uc_stack.ss_size);
 	thread->finished = 0;
-
+	thread->last_join = thread;
 	*newthread = thread;
 
 	makecontext(&thread->uc, (void (*)(void))launch, 2, func, funcarg);
@@ -391,6 +393,9 @@ static int thread_semi_join(struct thread* _thread)
 		force_thread_yield();
 #elif SCHED == FIFO || SCHED == ECONOMY
 	if (_thread->finished != 1) {
+		// struct thread* _self = thread_self();
+		// if (_self->joiner != NULL)
+		// 	_self->joiner->last_join = _thread;
 	#if SCHED == FIFO
 		_thread->joiner = queue__pop(&queue); // Le joiner s'enlève de la file
 		if (swapcontext(&(_thread->joiner->uc), &((struct thread*)queue__top(&queue))->uc) != 0) {
@@ -419,9 +424,26 @@ static int thread_semi_join(struct thread* _thread)
 int thread_join(thread_t thread, void** retval)
 {
 	struct thread* _thread = (struct thread*)thread;
+
+	struct thread* self = thread_self();
+
+#if SCHED == FIFO || SCHED == ECONOMY || SCHED == BASIC
+	// deadblock
+	if (_thread->last_join == self) { // test trop large
+		error("thread_join deadlock");
+		return -1;
+	}
+	struct thread* _self = thread_self();
+	self->last_join = _thread->last_join;
+	if (_self->joiner != NULL)
+		_self->joiner->last_join = _thread;
+#endif
+
 	int code;
 	if ((code = thread_semi_join(_thread)))
 		return code;
+
+	self->last_join = self;
 
 	nb_threads--;
 
