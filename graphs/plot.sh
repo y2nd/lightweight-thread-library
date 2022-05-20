@@ -118,19 +118,19 @@ function complexity2() {
     gnuplot -e "set terminal pngcairo size 1120,630 enhanced font 'Verdana,10'; set title '$(echo $EXEC | sed 's/_/\\_/g')'; set output '$SCRIPT_DIR/$TITLE.png'; set style line 1 linecolor rgb '#0060ad' linetype 1 linewidth 2; plot '$SCRIPT_DIR/data_plot_$EXEC' using 1:2 with linespoint"
 }
 
-SUFFIXE=p
-SUFFIXE1=
-
-complexity "${SUFFIXE}21-create-many" "21-create-many$SUFFIXE1" 50 "$(seq 1000 1000 1000)"
-complexity "${SUFFIXE}22-create-many-recursive" "22-create-many-recursive$SUFFIXE1" 50 "$(seq 1000 1000 1000)"
-complexity "${SUFFIXE}23-create-many-once" "23-create-many-once$SUFFIXE1" 50 "$(seq 1000 1000 1000)"
-complexity2 "${SUFFIXE}31-switch-many" "31-switch-many$SUFFIXE1" 100 "10" "$(seq 1000 1000 1000)"
-complexity "${SUFFIXE}31-switch-many2" "31-switch-many$SUFFIXE1" 100 "$(seq 1000 1000 1000)" "10"
-complexity2 "${SUFFIXE}32-switch-many-join" "32-switch-many-join$SUFFIXE1" 100 "10" "$(seq 1000 1000 1000)"
-complexity "${SUFFIXE}32-switch-many-join2" "32-switch-many-join$SUFFIXE1" 100 "$(seq 1000 1000 1000)" "10"
-complexity2 "${SUFFIXE}33-switch-many-cascade" "33-switch-many-cascade$SUFFIXE1" 100 "10" "$(seq 1000 1000 1000)"
-complexity "${SUFFIXE}33-switch-many-cascade2" "33-switch-many-cascade$SUFFIXE1" 100 "$(seq 10 30 300)" 10
-complexity_fibo "${SUFFIXE}51-fibonacci" "51-fibonacci$SUFFIXE1" 1 25
+#SUFFIXE=p
+#SUFFIXE1=
+#
+#complexity "${SUFFIXE}21-create-many" "21-create-many$SUFFIXE1" 50 "$(seq 1000 1000 1000)"
+#complexity "${SUFFIXE}22-create-many-recursive" "22-create-many-recursive$SUFFIXE1" 50 "$(seq 1000 1000 1000)"
+#complexity "${SUFFIXE}23-create-many-once" "23-create-many-once$SUFFIXE1" 50 "$(seq 1000 1000 1000)"
+#complexity2 "${SUFFIXE}31-switch-many" "31-switch-many$SUFFIXE1" 100 "10" "$(seq 1000 1000 1000)"
+#complexity "${SUFFIXE}31-switch-many2" "31-switch-many$SUFFIXE1" 100 "$(seq 1000 1000 1000)" "10"
+#complexity2 "${SUFFIXE}32-switch-many-join" "32-switch-many-join$SUFFIXE1" 100 "10" "$(seq 1000 1000 1000)"
+#complexity "${SUFFIXE}32-switch-many-join2" "32-switch-many-join$SUFFIXE1" 100 "$(seq 1000 1000 1000)" "10"
+#complexity2 "${SUFFIXE}33-switch-many-cascade" "33-switch-many-cascade$SUFFIXE1" 100 "10" "$(seq 1000 1000 1000)"
+#complexity "${SUFFIXE}33-switch-many-cascade2" "33-switch-many-cascade$SUFFIXE1" 100 "$(seq 10 30 300)" 10
+#complexity_fibo "${SUFFIXE}51-fibonacci" "51-fibonacci$SUFFIXE1" 1 25
 
 #SCHED=fifo make
 #SCHED=basic make
@@ -186,12 +186,11 @@ complexity_fibo "${SUFFIXE}51-fibonacci" "51-fibonacci$SUFFIXE1" 1 25
 #
 
 make
-MAX_OPTI=1 make
-NORMAL_OPTI=1 make
+PREEMPT_GLOBAL=no make
 
 SUFFIXE=c
-SUFFIXE1=-normal_opti
-SUFFIXE2=-max_opti
+SUFFIXE1=-preempt_global_no
+SUFFIXE2=-preempt_global_no
 
 test "${SUFFIXE}01-main" "01-main$SUFFIXE1" "01-main$SUFFIXE2" 10 100
 test "${SUFFIXE}02-switch" "02-switch$SUFFIXE1" "02-switch$SUFFIXE2" 10 100

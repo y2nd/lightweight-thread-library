@@ -86,36 +86,84 @@ static int force_thread_yield();
 
 timer_t timerid;
 int has_yielded = 0;
+sigset_t sigset;
+
+	#if PREEMPT_GLOBAL
+int can_preempt = 1;
+int has_handled = 0;
+	#endif
 
 static int force_thread_yield_impl();
 
-void handler(int i)
+void block_preempt()
 {
-	#if TIMER_INTERVAL
-	if (has_yielded) {
-		has_yielded = 0;
-		return;
-	} else {
-		(void)i;
-		printf("Handler called\n");
-		force_thread_yield_impl();
-	}
-	#endif
-	#if !TIMER_INTERVAL
-	(void)i;
-	printf("Handler called\n");
-	force_thread_yield_impl();
+	#if PREEMPT_GLOBAL
+	can_preempt = 0;
+	#else
+	if (sigprocmask(SIG_BLOCK, &sigset, NULL) != 0)
+		error("sigprocmask block");
 	#endif
 }
 
-sigset_t sigset;
+void handler(int i);
+
+void unblock_preempt()
+{
+	#if PREEMPT_GLOBAL
+	can_preempt = 2;
+	if (has_handled == 1) {
+		has_handled = 0;
+		handler(10000);
+	} else
+		can_preempt = 1;
+	#else
+	if (sigprocmask(SIG_UNBLOCK, &sigset, NULL) != 0)
+		error("sigprocmask blunblockock");
+	#endif
+}
+
+void handler(int i)
+{
+	(void)i;
+	#if PREEMPT_GLOBAL
+	if (i == 10000 || can_preempt == 1) {
+		has_handled = 0;
+	#endif
+	#if TIMER_INTERVAL
+		if (has_yielded) {
+			has_yielded = 0;
+			return;
+		} else {
+		#if PREEMPT_GLOBAL
+			can_preempt = 2;
+			force_thread_yield_impl();
+			unblock_preempt();
+		#else
+			force_thread_yield_impl();
+		#endif
+		}
+	#else
+		#if PREEMPT_GLOBAL
+	can_preempt = 2;
+	force_thread_yield_impl();
+	unblock_preempt();
+		#else
+	force_thread_yield_impl();
+		#endif
+	#endif
+	#if PREEMPT_GLOBAL
+	} else if (can_preempt == 0)
+		has_handled = 1;
+
+	#endif
+}
 
 void set_time()
 {
 	struct itimerspec its;
 	long long freq_nanosecs;
 
-	freq_nanosecs = 100000000; // 100 ms
+	freq_nanosecs = PREEMPT_INTERVAL; // 100 ms
 	its.it_value.tv_sec = freq_nanosecs / 1000000000;
 	its.it_value.tv_nsec = freq_nanosecs % 1000000000;
 	#if TIMER_INTERVAL
@@ -131,18 +179,6 @@ void set_time()
 
 	if (timer_settime(timerid, 0, &its, NULL) == -1)
 		error("timer_settime");
-}
-
-void block_preempt()
-{
-	if (sigprocmask(SIG_BLOCK, &sigset, NULL) != 0)
-		error("sigprocmask block");
-}
-
-void unblock_preempt()
-{
-	if (sigprocmask(SIG_UNBLOCK, &sigset, NULL) != 0)
-		error("sigprocmask blunblockock");
 }
 
 #endif
@@ -185,7 +221,7 @@ static int CONSTRUCTOR init_main_thread_if_needed()
 #if T_MEM_POOL
 		threads.first_pool = malloc(sizeof(struct thread_pool) + T_MEM_POOL_FS * sizeof(struct thread));
 		if (!threads.first_pool) {
-			printf("init_main_thread_if_needed erreur malloc\n");
+			error("init_main_thread_if_needed erreur malloc\n");
 			return -1;
 		}
 		threads.first_pool->next = NULL;
@@ -233,6 +269,12 @@ thread_t thread_self(void)
 
 void launch(void* (*func)(void*), void* arg)
 {
+#if PREEMPT
+	#if !TIMER_INTERVAL
+	set_time();
+	#endif
+	unblock_preempt();
+#endif
 	thread_exit(func(arg));
 }
 
@@ -274,7 +316,7 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 				if (threads.last_pool->next)
 					goto size_ok_thread;
 			}
-			printf("thread_create erreur malloc\n");
+			error("thread_create erreur malloc\n");
 			return -1;
 		}
 	size_ok_thread:
@@ -333,6 +375,10 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 
 int thread_yield(void)
 {
+#if TIMER_INTERVAL
+	has_yielded = 1;
+#endif
+
 	return force_thread_yield();
 }
 
@@ -356,10 +402,10 @@ static int force_thread_yield_impl(void)
 			error("force_thread_yield swapcontext");
 			return -1;
 		}
-#if PREEMPT && !TIMER_INTERVAL
-		set_time();
-#endif
 	}
+#if PREEMPT && !TIMER_INTERVAL
+	set_time();
+#endif
 	return 0;
 }
 
@@ -386,6 +432,10 @@ static int thread_semi_join(struct thread* _thread)
 {
 #if PREEMPT
 	block_preempt();
+#endif
+
+#if TIMER_INTERVAL
+	has_yielded = 1;
 #endif
 
 #if SCHED == BASIC
@@ -464,6 +514,10 @@ void thread_exit(void* retval)
 {
 #if PREEMPT
 	block_preempt();
+#endif
+
+#if TIMER_INTERVAL
+	has_yielded = 1;
 #endif
 
 	struct thread* thread = queue__top(&queue);
@@ -570,7 +624,7 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 #if SCHED == BASIC
 	/* yield until mutex is unlocked */
 	while (mutex->dummy)
-		thread_yield();
+		force_thread_yield();
 #elif SCHED == FIFO || SCHED == ECONOMY
 	/* if mutex is locked */
 	if (mutex->dummy) {

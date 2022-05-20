@@ -28,6 +28,12 @@
 #ifndef TIMER_INTERVAL
 	#define TIMER_INTERVAL YES
 #endif
+#ifndef PREEMPT_GLOBAL
+	#define PREEMPT_GLOBAL YES
+#endif
+#ifndef PREEMPT_INTERVAL
+	#define PREEMPT_INTERVAL 100000000
+#endif
 #ifndef CLOCKID
 	#define CLOCKID CLOCK_MONOTONIC
 #endif
