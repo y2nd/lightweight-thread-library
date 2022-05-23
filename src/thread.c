@@ -46,7 +46,8 @@ struct thread {
 	int finished;
 #if SCHED == FIFO || SCHED == ECONOMY || SCHED == BASIC
 	struct thread* joiner; // Le thread qui attend notre fin
-	struct thread* last_join;
+	struct thread* last_join; // deadlock
+	struct thread* last_joiner; // deadlock
 
 #endif
 #if SCHED == ECONOMY
@@ -206,7 +207,8 @@ static int CONSTRUCTOR init_main_thread_if_needed()
 		}
 		main_thread.valgrind_stackid = -1;
 		main_thread.finished = 0;
-
+		main_thread.last_join = &main_thread;
+		main_thread.last_joiner = &main_thread;
 #if SCHED == FIFO || SCHED == ECONOMY
 		main_thread.joiner = NULL;
 #endif
@@ -354,6 +356,7 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 	thread->valgrind_stackid = VALGRIND_STACK_REGISTER(thread->uc.uc_stack.ss_sp, thread->uc.uc_stack.ss_sp + thread->uc.uc_stack.ss_size);
 	thread->finished = 0;
 	thread->last_join = thread;
+	thread->last_joiner = thread;
 	*newthread = thread;
 
 	makecontext(&thread->uc, (void (*)(void))launch, 2, func, funcarg);
@@ -443,9 +446,6 @@ static int thread_semi_join(struct thread* _thread)
 		force_thread_yield();
 #elif SCHED == FIFO || SCHED == ECONOMY
 	if (_thread->finished != 1) {
-		// struct thread* _self = thread_self();
-		// if (_self->joiner != NULL)
-		// 	_self->joiner->last_join = _thread;
 	#if SCHED == FIFO
 		_thread->joiner = queue__pop(&queue); // Le joiner s'enlève de la file
 		if (swapcontext(&(_thread->joiner->uc), &((struct thread*)queue__top(&queue))->uc) != 0) {
@@ -478,15 +478,19 @@ int thread_join(thread_t thread, void** retval)
 	struct thread* self = thread_self();
 
 #if SCHED == FIFO || SCHED == ECONOMY || SCHED == BASIC
-	// deadblock
-	if (_thread->last_join == self) { // test trop large
+	// deadlock
+	if (_thread->last_join == self || self->last_joiner == _thread) {
 		error("thread_join deadlock");
 		return -1;
 	}
 	struct thread* _self = thread_self();
+	_thread->last_joiner = self->last_joiner;
 	self->last_join = _thread->last_join;
+	self->last_joiner->last_join = self->last_join;
+
 	if (_self->joiner != NULL)
 		_self->joiner->last_join = _thread;
+
 #endif
 
 	int code;
@@ -494,6 +498,7 @@ int thread_join(thread_t thread, void** retval)
 		return code;
 
 	self->last_join = self;
+	_thread->last_joiner = _thread;
 
 	nb_threads--;
 
