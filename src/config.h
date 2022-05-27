@@ -85,7 +85,7 @@
 
 /* Number of threads before create directly joins the thread */
 #ifndef THREAD_LIMIT
-	#define THREAD_LIMIT 1000
+	#define THREAD_LIMIT 100000
 #endif
 
 /* Wether deadlocks are detected */
