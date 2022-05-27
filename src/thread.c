@@ -81,10 +81,6 @@ struct thread main_thread;
 static int force_thread_yield();
 
 #if PREEMPT
-// TODO PREEMPT (rapport)-> faire des tests de perf avec une variable globale à la place de sigprocmask pour block et unblock
-// (devrait générer un problème où il faut unblock dès qu'on arrive sur le thread)
-// + tests perfs avec timer en 1 ms et 100 ms (facteur de temps ?)
-// + comparaison interval/reset
 
 timer_t timerid;
 int has_yielded = 0;
