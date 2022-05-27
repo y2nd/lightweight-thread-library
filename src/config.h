@@ -86,6 +86,9 @@
 /* Number of threads before create directly joins the thread */
 #define THREAD_LIMIT 1000
 
+/* Wether deadlocks are detected */
+#define CHECK_DEADLOCKS YES
+
 #include "config_verifs.h"
 
 #endif /* __CONFIG_H__ */

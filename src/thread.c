@@ -44,11 +44,12 @@ struct thread {
 	int valgrind_stackid;
 	void* return_value; // Ou next
 	int finished;
-#if SCHED == FIFO || SCHED == ECONOMY || SCHED == BASIC
+#if SCHED == FIFO || SCHED == ECONOMY || CHECK_DEADLOCKS
 	struct thread* joiner; // Le thread qui attend notre fin
-	struct thread* last_join; // deadlock
-	struct thread* last_joiner; // deadlock
-
+#endif
+#if CHECK_DEADLOCKS
+	struct thread* last_join;
+	struct thread* last_joiner;
 #endif
 #if SCHED == ECONOMY
 	int joining; // Wether the thread is waiting for another to finish
@@ -292,8 +293,6 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 
 	nb_threads++;
 
-	// TODO : Ajouter le thread en 2 position, il va très rapidement servir
-
 #if T_MEM_POOL
 	struct thread* thread;
 	if ((thread = threads.first_empty)) {
@@ -355,8 +354,10 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 	thread->uc.uc_link = NULL; // WARN : (sizeof(ucontext_t));
 	thread->valgrind_stackid = VALGRIND_STACK_REGISTER(thread->uc.uc_stack.ss_sp, thread->uc.uc_stack.ss_sp + thread->uc.uc_stack.ss_size);
 	thread->finished = 0;
+#if CHECK_DEADLOCKS
 	thread->last_join = thread;
 	thread->last_joiner = thread;
+#endif
 	*newthread = thread;
 
 	makecontext(&thread->uc, (void (*)(void))launch, 2, func, funcarg);
@@ -378,7 +379,7 @@ int thread_create(thread_t* newthread, void* (*func)(void*), void* funcarg)
 
 int thread_yield(void)
 {
-#if TIMER_INTERVAL
+#if PREEMPT && TIMER_INTERVAL
 	has_yielded = 1;
 #endif
 
@@ -437,7 +438,7 @@ static int thread_semi_join(struct thread* _thread)
 	block_preempt();
 #endif
 
-#if TIMER_INTERVAL
+#if PREEMPT && TIMER_INTERVAL
 	has_yielded = 1;
 #endif
 
@@ -477,9 +478,9 @@ int thread_join(thread_t thread, void** retval)
 
 	struct thread* self = thread_self();
 
-#if SCHED == FIFO || SCHED == ECONOMY || SCHED == BASIC
-	// deadlock
-	if (_thread->last_join == self || self->last_joiner == _thread) {
+#if CHECK_DEADLOCKS
+	// deadblock
+	if (_thread->last_join == self) {
 		error("thread_join deadlock");
 		return -1;
 	}
@@ -497,8 +498,10 @@ int thread_join(thread_t thread, void** retval)
 	if ((code = thread_semi_join(_thread)))
 		return code;
 
+#if CHECK_DEADLOCKS
 	self->last_join = self;
 	_thread->last_joiner = _thread;
+#endif
 
 	nb_threads--;
 
@@ -521,7 +524,7 @@ void thread_exit(void* retval)
 	block_preempt();
 #endif
 
-#if TIMER_INTERVAL
+#if PREEMPT && TIMER_INTERVAL
 	has_yielded = 1;
 #endif
 
@@ -635,7 +638,7 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 	if (mutex->dummy) {
 		struct thread* self = queue__pop(&queue);
 	#if SCHED == ECONOMY
-		self->joining = 1; // TODO: debug infinite loop
+		self->joining = 1;
 	#endif
 		queue__add(&mutex->queue, self);
 
