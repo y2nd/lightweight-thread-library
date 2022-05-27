@@ -5,7 +5,7 @@ VALGRIND_OPTIONS := --leak-check=full --show-reachable=yes --track-origins=yes -
 LIB_PATH:=install/lib
 BIN_PATH:=install/bin
 
-TST:=tst/01-main.c tst/02-switch.c tst/03-equity.c tst/11-join.c tst/12-join-main.c tst/21-create-many.c tst/22-create-many-recursive.c tst/23-create-many-once.c tst/31-switch-many.c tst/32-switch-many-join.c tst/33-switch-many-cascade.c tst/44-reduction.c tst/51-fibonacci.c tst/61-mutex.c tst/62-mutex.c tst/71-preemption.c tst/77-merge-sort.c tst/81-deadlock.c #$(wildcard tst/*.c)
+TST:=tst/01-main.c tst/02-switch.c tst/03-equity.c tst/11-join.c tst/12-join-main.c tst/21-create-many.c tst/22-create-many-recursive.c tst/23-create-many-once.c tst/31-switch-many.c tst/32-switch-many-join.c tst/33-switch-many-cascade.c tst/44-reduction.c tst/51-fibonacci.c tst/61-mutex.c tst/62-mutex.c tst/71-preemption.c tst/77-merge-sort.c tst/81-deadlock.c tst/82-deadlock_inverse.c tst/83-deadlock_explicit.c tst/84-deadlock_before_after.c
 BINS:=$(TST:tst/%.c=$(BIN_PATH)/%)
 BINS_PTHREAD:=$(TST:tst/%.c=$(BIN_PATH)/%-pthread)
 
@@ -17,7 +17,7 @@ define \n
 endef
 
 # Gestion des options
-OPTIONS:=SCHED USE_CTOR Q_LOOP Q_MEM_POOL Q_MEM_POOL_G T_MEM_POOL T_MEM_POOL_G PREEMPT THREAD_LIMIT TIMER_INTERVAL PREEMPT_GLOBAL
+OPTIONS:=SCHED USE_CTOR Q_LOOP Q_MEM_POOL Q_MEM_POOL_G T_MEM_POOL T_MEM_POOL_G PREEMPT THREAD_LIMIT TIMER_INTERVAL PREEMPT_GLOBAL PREEMPT_INTERVAL CLOCKID SIG CHECK_DEADLOCKS
 SUFFIX:=
 
 ifdef NORMAL_OPTI
@@ -104,8 +104,12 @@ check: test
 	LD_LIBRARY_PATH=install/lib install/bin/62-mutex$(SUFFIX) 20
 	LD_LIBRARY_PATH=install/lib install/bin/71-preemption$(SUFFIX) 20
 	LD_LIBRARY_PATH=install/lib install/bin/77-merge-sort$(SUFFIX)
+ifeq ($(CHECK_DEADLOCKS),YES)
 	LD_LIBRARY_PATH=install/lib install/bin/81-deadlock$(SUFFIX)
-
+	LD_LIBRARY_PATH=install/lib install/bin/82-deadlock_inverse$(SUFFIX)
+	LD_LIBRARY_PATH=install/lib install/bin/83-deadlock_explicit$(SUFFIX)
+	LD_LIBRARY_PATH=install/lib install/bin/84-deadlock_before_after$(SUFFIX)
+endif
 
 valgrind: $(BINS)
 	echo "****************************************"
@@ -138,8 +142,20 @@ valgrind: $(BINS)
 	LD_LIBRARY_PATH=install/lib valgrind $(VALGRIND_OPTIONS) install/bin/61-mutex$(SUFFIX) 20
 	echo "****************************************"
 	LD_LIBRARY_PATH=install/lib valgrind $(VALGRIND_OPTIONS) install/bin/62-mutex$(SUFFIX) 20
-		echo "****************************************"
-	LD_LIBRARY_PATH=install/lib valgrind $(VALGRIND_OPTIONS) install/bin/81-deadblock$(SUFFIX)
+	echo "****************************************"
+	LD_LIBRARY_PATH=install/lib valgrind $(VALGRIND_OPTIONS) install/bin/71-preemption$(SUFFIX) 20
+	echo "****************************************"
+	LD_LIBRARY_PATH=install/lib valgrind $(VALGRIND_OPTIONS) install/bin/77-merge-sort$(SUFFIX)
+ifeq ($(CHECK_DEADLOCKS),YES)
+	echo "****************************************"
+	LD_LIBRARY_PATH=install/lib valgrind $(VALGRIND_OPTIONS) install/bin/81-deadlock$(SUFFIX)
+	echo "****************************************"
+	LD_LIBRARY_PATH=install/lib valgrind $(VALGRIND_OPTIONS) install/bin/82-deadlock_inverse$(SUFFIX)
+	echo "****************************************"
+	LD_LIBRARY_PATH=install/lib valgrind $(VALGRIND_OPTIONS) install/bin/83-deadlock_explicit$(SUFFIX)
+	echo "****************************************"
+	LD_LIBRARY_PATH=install/lib valgrind $(VALGRIND_OPTIONS) install/bin/84-deadlock_before_after$(SUFFIX)
+endif
 
 
 pthreads: $(BINS_PTHREAD)
@@ -158,8 +174,14 @@ pthreads: $(BINS_PTHREAD)
 	install/bin/51-fibonacci$(SUFFIX)-pthread 20
 	install/bin/61-mutex$(SUFFIX)-pthread 20
 	install/bin/62-mutex$(SUFFIX)-pthread 20
+	install/bin/71-preemption$(SUFFIX)-pthread 20
+	install/bin/77-merge-sort$(SUFFIX)-pthread
+ifeq ($(CHECK_DEADLOCKS),YES)
 	install/bin/81-deadlock$(SUFFIX)-pthread
-
+	install/bin/82-deadlock$(SUFFIX)-pthread
+	install/bin/83-deadlock_explicit$(SUFFIX)-pthread
+	install/bin/84-deadlock_before_after$(SUFFIX)-pthread
+endif
 
 graphs: $(BINS) $(BINS_PTHREAD)
 	graphs/plot.sh

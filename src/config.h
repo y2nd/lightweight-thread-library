@@ -32,7 +32,7 @@
 	#define PREEMPT_GLOBAL YES
 #endif
 #ifndef PREEMPT_INTERVAL
-	#define PREEMPT_INTERVAL 100000000
+	#define PREEMPT_INTERVAL 100
 #endif
 #ifndef CLOCKID
 	#define CLOCKID CLOCK_MONOTONIC
@@ -84,10 +84,14 @@
 #endif
 
 /* Number of threads before create directly joins the thread */
-#define THREAD_LIMIT 1000
+#ifndef THREAD_LIMIT
+	#define THREAD_LIMIT 1000
+#endif
 
 /* Wether deadlocks are detected */
-#define CHECK_DEADLOCKS YES
+#ifndef CHECK_DEADLOCKS
+	#define CHECK_DEADLOCKS NO
+#endif
 
 #include "config_verifs.h"
 

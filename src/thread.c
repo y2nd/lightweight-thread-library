@@ -165,7 +165,7 @@ void set_time()
 	struct itimerspec its;
 	long long freq_nanosecs;
 
-	freq_nanosecs = PREEMPT_INTERVAL; // 100 ms
+	freq_nanosecs = PREEMPT_INTERVAL * 1000000;
 	its.it_value.tv_sec = freq_nanosecs / 1000000000;
 	its.it_value.tv_nsec = freq_nanosecs % 1000000000;
 	#if TIMER_INTERVAL
@@ -208,8 +208,10 @@ static int CONSTRUCTOR init_main_thread_if_needed()
 		}
 		main_thread.valgrind_stackid = -1;
 		main_thread.finished = 0;
+#if CHECK_DEADLOCKS
 		main_thread.last_join = &main_thread;
 		main_thread.last_joiner = &main_thread;
+#endif
 #if SCHED == FIFO || SCHED == ECONOMY
 		main_thread.joiner = NULL;
 #endif
@@ -476,9 +478,8 @@ int thread_join(thread_t thread, void** retval)
 {
 	struct thread* _thread = (struct thread*)thread;
 
-	struct thread* self = thread_self();
-
 #if CHECK_DEADLOCKS
+	struct thread* self = thread_self();
 	// deadblock
 	if (_thread->last_join == self) {
 		error("thread_join deadlock");
@@ -636,16 +637,20 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 #elif SCHED == FIFO || SCHED == ECONOMY
 	/* if mutex is locked */
 	if (mutex->dummy) {
+	#if SCHED == FIFO
 		struct thread* self = queue__pop(&queue);
-	#if SCHED == ECONOMY
-		self->joining = 1;
-	#endif
 		queue__add(&mutex->queue, self);
 
 		if (swapcontext(&(self->uc), &((struct thread*)queue__top(&queue))->uc) != 0) {
 			error("thread_mutex_lock swapcontext");
 			return -1;
 		}
+	#elif SCHED == ECONOMY
+		struct thread* self = queue__top(&queue);
+		queue__add(&mutex->queue, self);
+		self->joining = 1;
+		force_thread_yield();
+	#endif
 	#if PREEMPT && !TIMER_INTERVAL
 		set_time();
 	#endif
@@ -678,8 +683,9 @@ int thread_mutex_unlock(thread_mutex_t* mutex)
 		if (queue__top(&mutex->queue) == NULL)
 			queue__roll(&mutex->queue);
 		struct thread* next = queue__pop(&mutex->queue);
+	#if SCHED == FIFO
 		queue__add(&queue, next);
-	#if SCHED == ECONOMY
+	#elif SCHED == ECONOMY
 		next->joining = 0;
 	#endif
 	}
